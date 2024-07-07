@@ -5,11 +5,12 @@ go 1.19
 require (
 	github.com/Mahdi-zarei/sing-box-extra v0.0.0-20240614112142-907408da0959
 	github.com/matsuridayo/libneko v0.0.0-20230913024055-5277a5bfc889
+	github.com/sagernet/sing v0.4.1
 	github.com/sagernet/sing-box v1.9.3
 	grpc_server v1.0.0
 )
 
-replace github.com/sagernet/sing-box => github.com/Mahdi-zarei/sing-box v1.3.5-0.20240613091205-668453f192a9
+replace github.com/sagernet/sing-box => github.com/Mahdi-zarei/sing-box v1.3.5-0.20240707122433-1e861b6971b7
 
 require (
 	berty.tech/go-libtor v1.0.385 // indirect
@@ -57,7 +58,6 @@ require (
 	github.com/sagernet/netlink v0.0.0-20240523065131-45e60152f9ba // indirect
 	github.com/sagernet/quic-go v0.43.1-beta.2 // indirect
 	github.com/sagernet/reality v0.0.0-20230406110435-ee17307e7691 // indirect
-	github.com/sagernet/sing v0.4.1 // indirect
 	github.com/sagernet/sing-dns v0.2.0 // indirect
 	github.com/sagernet/sing-mux v0.2.0 // indirect
 	github.com/sagernet/sing-quic v0.2.0-beta.5 // indirect

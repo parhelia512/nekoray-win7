@@ -22,14 +22,11 @@
 #include "3rdparty/VT100Parser.hpp"
 #include "3rdparty/qv2ray/v2/components/proxy/QvProxyConfigurator.hpp"
 #include "3rdparty/qv2ray/v2/ui/LogHighlighter.hpp"
-
-#ifndef NKR_NO_ZXING
 #include "3rdparty/ZxingQtReader.hpp"
-#endif
+#include "ui/edit/dialog_edit_group.h"
 
 #ifdef Q_OS_WIN
 #include "3rdparty/WinCommander.hpp"
-#include "ui/edit/dialog_edit_group.h"
 #else
 #ifdef Q_OS_LINUX
 #include "sys/linux/LinuxCap.h"
@@ -49,7 +46,6 @@
 #include <QMessageBox>
 #include <QDir>
 #include <QFileInfo>
-#include "edit/dialog_edit_group.h"
 
 void UI_InitMainWindow() {
     mainwindow = new MainWindow;
@@ -73,6 +69,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     }
     themeManager->ApplyTheme(NekoGui::dataStore->theme);
     ui->setupUi(this);
+    speedTestThreadPool->setMaxThreadCount(NekoGui::dataStore->test_concurrent);
     //
     connect(ui->menu_start, &QAction::triggered, this, [=]() { neko_start(); });
     connect(ui->menu_stop, &QAction::triggered, this, [=]() { neko_stop(); });
@@ -167,7 +164,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     }
     connect(ui->proxyListTable->horizontalHeader(), &QHeaderView::sectionClicked, this, [=](int logicalIndex) {
         GroupSortAction action;
-        // 不正确的descending实现
         if (proxy_last_order == logicalIndex) {
             action.descending = true;
             proxy_last_order = -1;
@@ -175,7 +171,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
             proxy_last_order = logicalIndex;
         }
         action.save_sort = true;
-        // 表头
         if (logicalIndex == 0) {
             action.method = GroupSortMethod::ByType;
         } else if (logicalIndex == 1) {
@@ -372,10 +367,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     if (NekoGui::dataStore->core_port <= 0) NekoGui::dataStore->core_port = 19810;
 
     auto core_path = QApplication::applicationDirPath() + "/";
-    core_path += IS_NEKO_BOX ? "nekobox_core" : "nekoray_core";
+    core_path += "nekobox_core";
 
     QStringList args;
-    args.push_back(IS_NEKO_BOX ? "nekobox" : "nekoray");
+    args.push_back("nekobox");
     args.push_back("-port");
     args.push_back(Int2String(NekoGui::dataStore->core_port));
     if (NekoGui::dataStore->flag_debug) args.push_back("-debug");
@@ -695,28 +690,6 @@ void MainWindow::on_menu_exit_triggered() {
 #define neko_set_spmode_FAILED \
     refresh_status();          \
     return;
-
-void MainWindow::neko_set_spmode_system_proxy(bool enable, bool save) {
-    if (enable != NekoGui::dataStore->spmode_system_proxy) {
-        if (enable) {
-            auto socks_port = NekoGui::dataStore->inbound_socks_port;
-            SetSystemProxy(socks_port, socks_port);
-        } else {
-            ClearSystemProxy();
-        }
-    }
-
-    if (save) {
-        NekoGui::dataStore->remember_spmode.removeAll("system_proxy");
-        if (enable && NekoGui::dataStore->remember_enable) {
-            NekoGui::dataStore->remember_spmode.append("system_proxy");
-        }
-        NekoGui::dataStore->Save();
-    }
-
-    NekoGui::dataStore->spmode_system_proxy = enable;
-    refresh_status();
-}
 
 void MainWindow::neko_toggle_system_proxy() {
     auto currentState = NekoGui::dataStore->spmode_system_proxy;
@@ -1646,7 +1619,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event) {
     if (event->type() == QEvent::MouseButtonPress) {
         auto mouseEvent = dynamic_cast<QMouseEvent *>(event);
         if (obj == ui->label_running && mouseEvent->button() == Qt::LeftButton && running != nullptr) {
-            speedtest_current();
+            url_test_current();
             return true;
         } else if (obj == ui->label_inbound && mouseEvent->button() == Qt::LeftButton) {
             on_menu_basic_settings_triggered();
