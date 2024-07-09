@@ -17,10 +17,8 @@
 #include "ui/dialog_vpn_settings.h"
 #include "ui/dialog_hotkey.h"
 
-#include "3rdparty/fix_old_qt.h"
 #include "3rdparty/qrcodegen.hpp"
 #include "3rdparty/VT100Parser.hpp"
-#include "3rdparty/qv2ray/v2/components/proxy/QvProxyConfigurator.hpp"
 #include "3rdparty/qv2ray/v2/ui/LogHighlighter.hpp"
 #include "3rdparty/ZxingQtReader.hpp"
 #include "ui/edit/dialog_edit_group.h"
@@ -46,6 +44,7 @@
 #include <QMessageBox>
 #include <QDir>
 #include <QFileInfo>
+#include <QStyleHints>
 
 void UI_InitMainWindow() {
     mainwindow = new MainWindow;
@@ -118,17 +117,28 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     // Setup log UI
     ui->splitter->restoreState(DecodeB64IfValid(NekoGui::dataStore->splitter_state));
-    new SyntaxHighlighter(false, qvLogDocument);
+    new SyntaxHighlighter(qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark, qvLogDocument);
     qvLogDocument->setUndoRedoEnabled(false);
     ui->masterLogBrowser->setUndoRedoEnabled(false);
     ui->masterLogBrowser->setDocument(qvLogDocument);
     ui->masterLogBrowser->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
-    {
-        auto font = ui->masterLogBrowser->font();
-        font.setPointSize(9);
-        ui->masterLogBrowser->setFont(font);
-        qvLogDocument->setDefaultFont(font);
-    }
+
+    connect(qApp->styleHints(), &QStyleHints::colorSchemeChanged, this, [=](const Qt::ColorScheme& scheme) {
+        new SyntaxHighlighter(scheme == Qt::ColorScheme::Dark, qvLogDocument);
+        themeManager->ApplyTheme(NekoGui::dataStore->theme, true);
+    });
+    connect(themeManager, &ThemeManager::themeChanged, this, [=](const QString& theme){
+        if (theme.toLower().contains("vista")) {
+            // light themes
+            new SyntaxHighlighter(false, qvLogDocument);
+        } else if (theme.toLower().contains("qdarkstyle")) {
+            // dark themes
+            new SyntaxHighlighter(true, qvLogDocument);
+        } else {
+            // bi-mode themes, follow system preference
+            new SyntaxHighlighter(qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark, qvLogDocument);
+        }
+    });
     connect(ui->masterLogBrowser->verticalScrollBar(), &QSlider::valueChanged, this, [=](int value) {
         if (ui->masterLogBrowser->verticalScrollBar()->maximum() == value)
             qvLogAutoScoll = true;
@@ -389,16 +399,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
         },
         DS_cores);
 
-    // Remember system proxy
-    if (NekoGui::dataStore->remember_enable || NekoGui::dataStore->flag_restart_tun_on) {
-        if (NekoGui::dataStore->remember_spmode.contains("system_proxy")) {
-            neko_set_spmode_system_proxy(true, false);
-        }
-        if (NekoGui::dataStore->remember_spmode.contains("vpn") || NekoGui::dataStore->flag_restart_tun_on) {
-            neko_set_spmode_vpn(true, false);
-        }
-    }
-
     connect(qApp, &QGuiApplication::commitDataRequest, this, &MainWindow::on_commitDataRequest);
 
     auto t = new QTimer;
@@ -563,6 +563,15 @@ void MainWindow::dialog_message_impl(const QString &sender, const QString &info)
         } else if (info == "CoreCrashed") {
             neko_stop(true);
         } else if (info.startsWith("CoreStarted")) {
+            if (NekoGui::dataStore->remember_enable || NekoGui::dataStore->flag_restart_tun_on) {
+                if (NekoGui::dataStore->remember_spmode.contains("system_proxy")) {
+                    neko_set_spmode_system_proxy(true, false);
+                }
+                if (NekoGui::dataStore->remember_spmode.contains("vpn") || NekoGui::dataStore->flag_restart_tun_on) {
+                    neko_set_spmode_vpn(true, false);
+                }
+            }
+
             neko_start(info.split(",")[1].toInt());
         }
     }

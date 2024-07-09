@@ -1,6 +1,7 @@
 #include <QStyle>
 #include <QApplication>
-#include <QStyleFactory>
+#include <QFile>
+#include <QPalette>
 
 #include "ThemeManager.hpp"
 #include "iostream"
@@ -9,27 +10,30 @@ ThemeManager *themeManager = new ThemeManager;
 
 extern QString ReadFileText(const QString &path);
 
-void ThemeManager::ApplyTheme(const QString &theme) {
-    auto internal = [=] {
+void ThemeManager::ApplyTheme(const QString &theme, bool force) {
+    if (this->system_style_name.isEmpty()) {
+        this->system_style_name = qApp->style()->name();
+    }
 
-        if (this->system_style_name.isEmpty()) {
-            this->system_style_name = qApp->style()->name();
-        }
+    if (this->current_theme == theme && !force) {
+        return;
+    }
 
-        if (this->current_theme == theme) {
-            return;
-        }
+    auto lowerTheme = theme.toLower();
+    if (lowerTheme == "system") {
+        qApp->setStyleSheet("");
+        qApp->setStyle(system_style_name);
+    } else if (lowerTheme == "qdarkstyle") {
+        QFile f(":qdarkstyle/dark/darkstyle.qss");
+        f.open(QFile::ReadOnly | QFile::Text);
+        QTextStream ts(&f);
+        qApp->setStyleSheet(ts.readAll());
+    } else {
+        qApp->setStyleSheet("");
+        qApp->setStyle(theme);
+    }
 
-        if (theme.toLower() == "system") {
-            qApp->setStyle(system_style_name);
-        } else {
-            qApp->setStyle(theme);
-        }
+    current_theme = theme;
 
-        current_theme = theme;
-    };
-    internal();
-
-    auto nekoray_css = ReadFileText(":/neko/neko.css");
-    qApp->setStyleSheet(qApp->styleSheet().append("\n").append(nekoray_css));
+    emit themeChanged(theme);
 }
