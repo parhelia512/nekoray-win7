@@ -28,17 +28,12 @@ endif ()
 
 #### default prefix path ####
 
-if (NOT NKR_LIBS)
-    if (NKR_PACKAGE)
-        list(APPEND NKR_LIBS ${CMAKE_SOURCE_DIR}/libs/deps/package)
-    else ()
-        list(APPEND NKR_LIBS ${CMAKE_SOURCE_DIR}/libs/deps/built)
-    endif ()
+list(APPEND NKR_LIBS ${CMAKE_SOURCE_DIR}/libs/deps/built)
+list(APPEND CMAKE_PREFIX_PATH ${NKR_LIBS})
+if(WIN32)
+    list(APPEND CMAKE_PREFIX_PATH "libs/deps/built/x64-windows-static")
 endif ()
-
-if (NOT NKR_DISABLE_LIBS)
-    list(APPEND CMAKE_PREFIX_PATH ${NKR_LIBS})
-endif ()
+add_definitions(-DCURL_STATICLIB)
 
 message("[CMAKE_PREFIX_PATH] ${CMAKE_PREFIX_PATH}")
 
@@ -66,10 +61,7 @@ list(APPEND NKR_EXTERNAL_TARGETS yaml-cpp)
 find_package(ZXing CONFIG REQUIRED)
 list(APPEND NKR_EXTERNAL_TARGETS ZXing::ZXing)
 
-include(FetchContent)
-FetchContent_Declare(cpr GIT_REPOSITORY https://github.com/libcpr/cpr.git
-        GIT_TAG 3b15fa82ea74739b574d705fea44959b58142eb8) # Replace with your desired git commit from: https://github.com/libcpr/cpr/releases
-FetchContent_MakeAvailable(cpr)
+find_package(cpr REQUIRED)
 list(APPEND NKR_EXTERNAL_TARGETS cpr::cpr)
 
 set(QHOTKEY_INSTALL OFF)
@@ -92,14 +84,10 @@ set(PROJECT_SOURCES
 
         3rdparty/qv2ray/v2/ui/LogHighlighter.cpp
         3rdparty/qv2ray/v2/ui/QvAutoCompleteTextEdit.cpp
-        3rdparty/qv2ray/v2/components/proxy/QvProxyConfigurator.cpp
         3rdparty/qv2ray/v2/ui/widgets/common/QJsonModel.cpp
         3rdparty/qv2ray/v2/ui/widgets/editors/w_JsonEditor.cpp
         3rdparty/qv2ray/v2/ui/widgets/editors/w_JsonEditor.hpp
         3rdparty/qv2ray/v2/ui/widgets/editors/w_JsonEditor.ui
-
-        3rdparty/qv2ray/v3/components/GeositeReader/GeositeReader.cpp
-        3rdparty/qv2ray/v3/components/GeositeReader/picoproto.cpp
 
         rpc/gRPC.cpp
 
@@ -162,6 +150,10 @@ set(PROJECT_SOURCES
         ui/edit/edit_custom.h
         ui/edit/edit_custom.cpp
         ui/edit/edit_custom.ui
+
+        ui/edit/edit_wireguard.h
+        ui/edit/edit_wireguard.cpp
+        ui/edit/edit_wireguard.ui
 
         ui/dialog_basic_settings.cpp
         ui/dialog_basic_settings.h

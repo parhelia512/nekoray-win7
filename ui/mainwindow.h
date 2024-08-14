@@ -60,6 +60,8 @@ public:
 
     void neko_set_spmode_vpn(bool enable, bool save = true);
 
+    bool get_elevated_permissions();
+
     void show_log_impl(const QString &log);
 
     void start_select_mode(QObject *context, const std::function<void(int)> &callback);
@@ -67,6 +69,8 @@ public:
     void RegisterHotkey(bool unregister);
 
     bool StopVPNProcess(bool unconditional = false);
+
+    void DownloadAssets(const QString &geoipUrl, const QString &geositeUrl);
 
 signals:
 
@@ -159,6 +163,8 @@ private:
     QMutex mu_exit;
     QSemaphore sem_stopped;
     int exit_reason = 0;
+    //
+    QMutex mu_download_assets;
 
     QList<std::shared_ptr<NekoGui::ProxyEntity>> get_now_selected_list();
 

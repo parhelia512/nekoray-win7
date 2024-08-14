@@ -51,17 +51,15 @@ namespace NekoGui_fmt {
         // type
         query.addQueryItem("type", stream->network);
 
-        if (stream->network == "ws" || stream->network == "http" || stream->network == "httpupgrade") {
+        if (stream->network == "ws" || stream->network == "httpupgrade") {
             if (!stream->path.isEmpty()) query.addQueryItem("path", stream->path);
             if (!stream->host.isEmpty()) query.addQueryItem("host", stream->host);
+        } else if (stream->network == "http" ) {
+            if (!stream->path.isEmpty()) query.addQueryItem("path", stream->path);
+            if (!stream->host.isEmpty()) query.addQueryItem("host", stream->host);
+            if (!stream->method.isEmpty()) query.addQueryItem("method", stream->method);
         } else if (stream->network == "grpc") {
             if (!stream->path.isEmpty()) query.addQueryItem("serviceName", stream->path);
-        } else if (stream->network == "tcp") {
-            if (stream->header_type == "http") {
-                if (!stream->path.isEmpty()) query.addQueryItem("path", stream->path);
-                query.addQueryItem("headerType", "http");
-                query.addQueryItem("host", stream->host);
-            }
         }
 
         // mux
@@ -121,80 +119,54 @@ namespace NekoGui_fmt {
     }
 
     QString VMessBean::ToShareLink() {
-        if (NekoGui::dataStore->old_share_link_format) {
-            // v2rayN format
-            QJsonObject N{
-                {"v", "2"},
-                {"ps", name},
-                {"add", serverAddress},
-                {"port", Int2String(serverPort)},
-                {"id", uuid},
-                {"aid", Int2String(aid)},
-                {"net", stream->network},
-                {"host", stream->host},
-                {"path", stream->path},
-                {"type", stream->header_type},
-                {"scy", security},
-                {"tls", stream->security == "tls" ? "tls" : ""},
-                {"sni", stream->sni},
-            };
-            return "vmess://" + QJsonObject2QString(N, true).toUtf8().toBase64();
+        QUrl url;
+        QUrlQuery query;
+        url.setScheme("vmess");
+        url.setUserName(uuid);
+        url.setHost(serverAddress);
+        url.setPort(serverPort);
+        if (!name.isEmpty()) url.setFragment(name);
+
+        query.addQueryItem("encryption", security);
+
+        //  security
+        auto security = stream->security;
+        if (security == "tls" && !stream->reality_pbk.trimmed().isEmpty()) security = "reality";
+        query.addQueryItem("security", security);
+
+        if (!stream->sni.isEmpty()) query.addQueryItem("sni", stream->sni);
+        if (stream->allow_insecure) query.addQueryItem("allowInsecure", "1");
+        if (stream->utlsFingerprint.isEmpty()) {
+            query.addQueryItem("fp", NekoGui::dataStore->utlsFingerprint);
         } else {
-            // ducksoft format
-            QUrl url;
-            QUrlQuery query;
-            url.setScheme("vmess");
-            url.setUserName(uuid);
-            url.setHost(serverAddress);
-            url.setPort(serverPort);
-            if (!name.isEmpty()) url.setFragment(name);
-
-            query.addQueryItem("encryption", security);
-
-            //  security
-            auto security = stream->security;
-            if (security == "tls" && !stream->reality_pbk.trimmed().isEmpty()) security = "reality";
-            query.addQueryItem("security", security);
-
-            if (!stream->sni.isEmpty()) query.addQueryItem("sni", stream->sni);
-            if (stream->allow_insecure) query.addQueryItem("allowInsecure", "1");
-            if (stream->utlsFingerprint.isEmpty()) {
-                query.addQueryItem("fp", NekoGui::dataStore->utlsFingerprint);
-            } else {
-                query.addQueryItem("fp", stream->utlsFingerprint);
-            }
-
-            if (security == "reality") {
-                query.addQueryItem("pbk", stream->reality_pbk);
-                if (!stream->reality_sid.isEmpty()) query.addQueryItem("sid", stream->reality_sid);
-                if (!stream->reality_spx.isEmpty()) query.addQueryItem("spx", stream->reality_spx);
-            }
-
-            // type
-            query.addQueryItem("type", stream->network);
-
-            if (stream->network == "ws" || stream->network == "http" || stream->network == "httpupgrade") {
-                if (!stream->path.isEmpty()) query.addQueryItem("path", stream->path);
-                if (!stream->host.isEmpty()) query.addQueryItem("host", stream->host);
-            } else if (stream->network == "grpc") {
-                if (!stream->path.isEmpty()) query.addQueryItem("serviceName", stream->path);
-            } else if (stream->network == "tcp") {
-                if (stream->header_type == "http") {
-                    query.addQueryItem("headerType", "http");
-                    query.addQueryItem("host", stream->host);
-                }
-            }
-
-            // mux
-            if (mux_state == 1) {
-                query.addQueryItem("mux", "true");
-            } else if (mux_state == 2) {
-                query.addQueryItem("mux", "false");
-            }
-
-            url.setQuery(query);
-            return url.toString(QUrl::FullyEncoded);
+            query.addQueryItem("fp", stream->utlsFingerprint);
         }
+
+        if (security == "reality") {
+            query.addQueryItem("pbk", stream->reality_pbk);
+            if (!stream->reality_sid.isEmpty()) query.addQueryItem("sid", stream->reality_sid);
+            if (!stream->reality_spx.isEmpty()) query.addQueryItem("spx", stream->reality_spx);
+        }
+
+        // type
+        query.addQueryItem("type", stream->network);
+
+        if (stream->network == "ws" || stream->network == "http" || stream->network == "httpupgrade") {
+            if (!stream->path.isEmpty()) query.addQueryItem("path", stream->path);
+            if (!stream->host.isEmpty()) query.addQueryItem("host", stream->host);
+        } else if (stream->network == "grpc") {
+            if (!stream->path.isEmpty()) query.addQueryItem("serviceName", stream->path);
+        }
+
+        // mux
+        if (mux_state == 1) {
+            query.addQueryItem("mux", "true");
+        } else if (mux_state == 2) {
+            query.addQueryItem("mux", "false");
+        }
+
+        url.setQuery(query);
+        return url.toString(QUrl::FullyEncoded);
     }
 
     QString NaiveBean::ToShareLink() {
@@ -267,6 +239,23 @@ namespace NekoGui_fmt {
             if (!q.isEmpty()) url.setQuery(q);
             if (!name.isEmpty()) url.setFragment(name);
         }
+        return url.toString(QUrl::FullyEncoded);
+    }
+
+    QString WireguardBean::ToShareLink() {
+        QUrl url;
+        url.setScheme("wg");
+        url.setHost(serverAddress);
+        url.setPort(serverPort);
+        if (!name.isEmpty()) url.setFragment(name);
+        QUrlQuery q;
+        q.addQueryItem("private_key", privateKey);
+        q.addQueryItem("peer_public_key", publicKey);
+        q.addQueryItem("pre_shared_key", preSharedKey);
+        q.addQueryItem("reserved", FormatReserved());
+        q.addQueryItem("mtu", Int2String(MTU));
+        q.addQueryItem("use_system_interface", useSystemInterface ? "true":"false");
+        url.setQuery(q);
         return url.toString(QUrl::FullyEncoded);
     }
 

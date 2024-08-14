@@ -44,6 +44,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QStyleHints>
+#include <main/HTTPRequestHelper.hpp>
 
 void UI_InitMainWindow() {
     mainwindow = new MainWindow;
@@ -531,12 +532,21 @@ void MainWindow::dialog_message_impl(const QString &sender, const QString &info)
             on_menu_exit_triggered();
         }
     }
+    if (info.contains("DownloadAssets")) {
+        auto splitted = info.split(";");
+        runOnNewThread([=](){
+            DownloadAssets(splitted[1], splitted[2]);
+        });
+    }
     //
     if (info == "RestartProgram") {
         this->exit_reason = 2;
         on_menu_exit_triggered();
     } else if (info == "Raise") {
         ActivateWindow(this);
+    }
+    if (info == "NeedAdmin") {
+        get_elevated_permissions();
     }
     // sender
     if (sender == Dialog_DialogEditProfile) {
@@ -701,10 +711,6 @@ void MainWindow::on_menu_exit_triggered() {
     QCoreApplication::quit();
 }
 
-#define neko_set_spmode_FAILED \
-    refresh_status();          \
-    return;
-
 void MainWindow::neko_toggle_system_proxy() {
     auto currentState = NekoGui::dataStore->spmode_system_proxy;
     if (currentState) {
@@ -714,39 +720,48 @@ void MainWindow::neko_toggle_system_proxy() {
     }
 }
 
+bool MainWindow::get_elevated_permissions() {
+    if (NekoGui::IsAdmin()) return true;
+#ifdef Q_OS_LINUX
+    if (!Linux_HavePkexec()) {
+        MessageBoxWarning(software_name, "Please install \"pkexec\" first.");
+        return false;
+    }
+    auto ret = Linux_Pkexec_SetCapString(NekoGui::FindNekoBoxCoreRealPath(), "cap_net_admin=ep");
+    if (ret == 0) {
+        this->exit_reason = 3;
+        on_menu_exit_triggered();
+    } else {
+        MessageBoxWarning(software_name, "Setcap for Tun mode failed.\n\n1. You may canceled the dialog.\n2. You may be using an incompatible environment like AppImage.");
+        if (QProcessEnvironment::systemEnvironment().contains("APPIMAGE")) {
+            MW_show_log("If you are using AppImage, it's impossible to start a Tun. Please use other package instead.");
+        }
+    }
+#endif
+#ifdef Q_OS_WIN
+    auto n = QMessageBox::warning(GetMessageBoxParent(), software_name, tr("Please run Nekoray as admin"), QMessageBox::Yes | QMessageBox::No);
+    if (n == QMessageBox::Yes) {
+        this->exit_reason = 3;
+        on_menu_exit_triggered();
+    }
+#endif
+
+#ifdef Q_OS_MACOS
+    MessageBoxWarning("Need administrator privilege", "Enabling TUN mode requires elevated privileges, please run Nekoray as root.");
+#endif
+
+    return false;
+}
+
 void MainWindow::neko_set_spmode_vpn(bool enable, bool save) {
     if (enable != NekoGui::dataStore->spmode_vpn) {
         if (enable) {
             bool requestPermission = !NekoGui::IsAdmin();
             if (requestPermission) {
-#ifdef Q_OS_LINUX
-                if (!Linux_HavePkexec()) {
-                    MessageBoxWarning(software_name, "Please install \"pkexec\" first.");
-                    neko_set_spmode_FAILED
+                if (!get_elevated_permissions()) {
+                    refresh_status();
+                    return;
                 }
-                auto ret = Linux_Pkexec_SetCapString(NekoGui::FindNekoBoxCoreRealPath(), "cap_net_admin=ep");
-                if (ret == 0) {
-                    this->exit_reason = 3;
-                    on_menu_exit_triggered();
-                } else {
-                    MessageBoxWarning(software_name, "Setcap for Tun mode failed.\n\n1. You may canceled the dialog.\n2. You may be using an incompatible environment like AppImage.");
-                    if (QProcessEnvironment::systemEnvironment().contains("APPIMAGE")) {
-                        MW_show_log("If you are using AppImage, it's impossible to start a Tun. Please use other package instead.");
-                    }
-                }
-#endif
-#ifdef Q_OS_WIN
-                auto n = QMessageBox::warning(GetMessageBoxParent(), software_name, tr("Please run Nekoray as admin"), QMessageBox::Yes | QMessageBox::No);
-                if (n == QMessageBox::Yes) {
-                    this->exit_reason = 3;
-                    on_menu_exit_triggered();
-                }
-#endif
-
-#ifdef Q_OS_MACOS
-                MessageBoxWarning("Need administrator privilege", "Enabling TUN mode requires elevated privileges, please run Nekoray as root.");
-#endif
-                neko_set_spmode_FAILED
             }
         }
     }
@@ -803,13 +818,8 @@ void MainWindow::refresh_status(const QString &traffic_update) {
         ui->label_running->setText(txt);
     }
     //
-    auto display_http = tr("None");
-    if (IsValidPort(NekoGui::dataStore->inbound_http_port)) {
-        display_http = DisplayAddress(NekoGui::dataStore->inbound_address, NekoGui::dataStore->inbound_http_port);
-    }
     auto display_socks = DisplayAddress(NekoGui::dataStore->inbound_address, NekoGui::dataStore->inbound_socks_port);
-    auto inbound_txt = QString("Socks: %1\nHTTP: %2").arg(display_socks, display_http);
-    inbound_txt = QString("Mixed: %1").arg(display_socks);
+    auto inbound_txt = QString("Mixed: %1").arg(display_socks);
     ui->label_inbound->setText(inbound_txt);
     //
     ui->checkBox_VPN->setChecked(NekoGui::dataStore->spmode_vpn);
@@ -1672,4 +1682,36 @@ bool MainWindow::StopVPNProcess(bool unconditional) {
         return ok;
     }
     return true;
+}
+
+void MainWindow::DownloadAssets(const QString &geoipUrl, const QString &geositeUrl) {
+    if (!mu_download_assets.tryLock()) {
+        runOnUiThread([=](){
+            MessageBoxWarning("Cannot start", "Last download request has not finished yet");
+        });
+        return;
+    }
+    MW_show_log("Start downloading...");
+    QString errors;
+    if (!geoipUrl.isEmpty()) {
+        auto resp = NetworkRequestHelper::DownloadGeoAsset(geoipUrl, "geoip.db");
+        if (!resp.isEmpty()) {
+            MW_show_log(QString("Failed to download geoip: %1").arg(resp));
+            errors += "geoip: " + resp;
+        }
+    }
+    if (!geositeUrl.isEmpty()) {
+        auto resp = NetworkRequestHelper::DownloadGeoAsset(geositeUrl, "geosite.db");
+        if (!resp.isEmpty()) {
+            MW_show_log(QString("Failed to download geosite: %1").arg(resp));
+            errors += "\ngeosite: " + resp;
+        }
+    }
+    mu_download_assets.unlock();
+    if (!errors.isEmpty()) {
+        runOnUiThread([=](){
+            MessageBoxWarning("Failed to download geo assets", errors);
+        });
+    }
+    MW_show_log("Geo Asset update completed!");
 }

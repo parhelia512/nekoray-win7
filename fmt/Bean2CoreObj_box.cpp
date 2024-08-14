@@ -19,6 +19,12 @@ namespace NekoGui_fmt {
                         transport["early_data_header_name"] = "Sec-WebSocket-Protocol";
                     }
                 }
+                bool ok;
+                auto headerMap = GetHeaderPairs(&ok);
+                if (!ok) {
+                    MW_show_log("Warning: headers could not be parsed, they will not be used");
+                }
+                transport["headers"] = QMapString2QJsonObject(headerMap);
                 if (ws_early_data_length > 0) {
                     transport["max_early_data"] = ws_early_data_length;
                     transport["early_data_header_name"] = ws_early_data_name;
@@ -26,21 +32,25 @@ namespace NekoGui_fmt {
             } else if (network == "http") {
                 if (!path.isEmpty()) transport["path"] = path;
                 if (!host.isEmpty()) transport["host"] = QListStr2QJsonArray(host.split(","));
+                if (!method.isEmpty()) transport["method"] = method.toUpper();
+                bool ok;
+                auto headerMap = GetHeaderPairs(&ok);
+                if (!ok) {
+                    MW_show_log("Warning: headers could not be parsed, they will not be used");
+                }
+                transport["headers"] = QMapString2QJsonObject(headerMap);
             } else if (network == "grpc") {
                 if (!path.isEmpty()) transport["service_name"] = path;
             } else if (network == "httpupgrade") {
                 if (!path.isEmpty()) transport["path"] = path;
                 if (!host.isEmpty()) transport["host"] = host;
+                bool ok;
+                auto headerMap = GetHeaderPairs(&ok);
+                if (!ok) {
+                    MW_show_log("Warning: headers could not be parsed, they will not be used");
+                }
+                transport["headers"] = QMapString2QJsonObject(headerMap);
             }
-            outbound->insert("transport", transport);
-        } else if (header_type == "http") {
-            // TCP + headerType
-            QJsonObject transport{
-                {"type", "http"},
-                {"method", "GET"},
-                {"path", path},
-                {"headers", QJsonObject{{"Host", QListStr2QJsonArray(host.split(","))}}},
-            };
             outbound->insert("transport", transport);
         }
 
@@ -227,6 +237,33 @@ namespace NekoGui_fmt {
             outbound["zero_rtt_handshake"] = zeroRttHandshake;
             if (!heartbeat.trimmed().isEmpty()) outbound["heartbeat"] = heartbeat;
         }
+
+        result.outbound = outbound;
+        return result;
+    }
+
+    CoreObjOutboundBuildResult WireguardBean::BuildCoreObjSingBox() {
+        CoreObjOutboundBuildResult result;
+
+        auto tun_name = "nekoray-wg";
+#ifdef Q_OS_MACOS
+        tun_name = "uwg9";
+#endif
+
+        QJsonObject outbound{
+            {"type", "wireguard"},
+            {"server", serverAddress},
+            {"server_port", serverPort},
+            {"interface_name", tun_name},
+            {"local_address", QJsonArray{"172.20.0.1/24", "fdfe:dcba:9876::1/96"}},
+            {"private_key", privateKey},
+            {"peer_public_key", publicKey},
+            {"pre_shared_key", preSharedKey},
+            {"reserved", QListInt2QJsonArray(reserved)},
+            {"mtu", MTU},
+            {"gso", enableGSO},
+            {"system_interface", useSystemInterface}
+        };
 
         result.outbound = outbound;
         return result;
