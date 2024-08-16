@@ -331,30 +331,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
             speedtestRunning.unlock();
             ui->menu_server->removeAction(ui->menu_stop_testing);
         }
-
-        auto currGroup = NekoGui::profileManager->GetGroup(NekoGui::dataStore->current_group);
-
-        if (!currGroup->Profiles().empty()) {
-            ui->menu_server->addAction(ui->menu_clear_test_result);
-            ui->menu_server->addAction(ui->menu_delete_repeat);
-            ui->menu_server->addAction(ui->menu_remove_unavailable);
-        } else {
-            ui->menu_server->removeAction(ui->menu_clear_test_result);
-            ui->menu_server->removeAction(ui->menu_delete_repeat);
-            ui->menu_server->removeAction(ui->menu_remove_unavailable);
-        }
-
-        if (currGroup != nullptr && !currGroup->url.isEmpty()) {
-            ui->menu_server->addAction(ui->menu_update_subscription);
-        } else {
-            ui->menu_server->removeAction(ui->menu_update_subscription);
-        }
     });
     connect(ui->actionUrl_Test_Selected, &QAction::triggered, this, [=]() {
         speedtest_current_group(get_now_selected_list());
     });
     connect(ui->actionUrl_Test_Group, &QAction::triggered, this, [=]() {
-        speedtest_current_group(NekoGui::profileManager->CurrentGroup()->ProfilesWithOrder());
+        speedtest_current_group(NekoGui::profileManager->CurrentGroup()->Profiles());
     });
     connect(ui->menu_stop_testing, &QAction::triggered, this, [=]() { stopSpeedTests(); });
     //
@@ -1359,12 +1341,86 @@ void MainWindow::on_menu_remove_unavailable_triggered() {
         }
     }
 
-    if (out_del.length() > 0 &&
-        QMessageBox::question(this, tr("Confirmation"), tr("Remove %1 item(s) ?").arg(out_del.length()) + "\n" + remove_display) == QMessageBox::StandardButton::Yes) {
+    if (!out_del.empty() &&
+        QMessageBox::question(this, tr("Confirmation"), tr("Remove %1 Unavailable item(s) ?").arg(out_del.length()) + "\n" + remove_display) == QMessageBox::StandardButton::Yes) {
         for (const auto &ent: out_del) {
             NekoGui::profileManager->DeleteProfile(ent->id);
         }
         refresh_proxy_list();
+    }
+}
+
+void MainWindow::on_menu_remove_invalid_triggered() {
+    QList<std::shared_ptr<NekoGui::ProxyEntity>> out_del;
+
+    auto currentGroup = NekoGui::profileManager->GetGroup(NekoGui::dataStore->current_group);
+    if (currentGroup == nullptr) return;
+    for (const auto &profile : currentGroup->Profiles()) {
+        if (!profile->bean->IsValid()) out_del += profile;
+    }
+
+    int remove_display_count = 0;
+    QString remove_display;
+    for (const auto &ent: out_del) {
+        remove_display += ent->bean->DisplayTypeAndName() + "\n";
+        if (++remove_display_count == 20) {
+            remove_display += "...";
+            break;
+        }
+    }
+
+    if (!out_del.empty() &&
+        QMessageBox::question(this, tr("Confirmation"), tr("Remove %1 Invalid item(s) ?").arg(out_del.length()) + "\n" + remove_display) == QMessageBox::StandardButton::Yes) {
+        for (const auto &ent: out_del) {
+            NekoGui::profileManager->DeleteProfile(ent->id);
+        }
+        refresh_proxy_list();
+    }
+}
+
+void MainWindow::on_menu_resolve_selected_triggered() {
+    auto profiles = get_now_selected_list();
+    if (profiles.isEmpty()) return;
+
+    if (mw_sub_updating) return;
+    mw_sub_updating = true;
+    auto resolve_count = std::atomic<int>(0);
+    NekoGui::dataStore->resolve_count = profiles.count();
+
+    for (const auto &profile: profiles) {
+        profile->bean->ResolveDomainToIP([=] {
+            profile->Save();
+            if (--NekoGui::dataStore->resolve_count != 0) return;
+            refresh_proxy_list();
+            mw_sub_updating = false;
+        });
+    }
+}
+
+void MainWindow::on_menu_resolve_domain_triggered() {
+    auto currGroup = NekoGui::profileManager->GetGroup(NekoGui::dataStore->current_group);
+    if (currGroup == nullptr) return;
+
+    auto profiles = currGroup->Profiles();
+    if (profiles.isEmpty()) return;
+
+    if (QMessageBox::question(this,
+                              tr("Confirmation"),
+                              tr("Replace domain server addresses with their resolved IPs?")) != QMessageBox::StandardButton::Yes) {
+        return;
+    }
+    if (mw_sub_updating) return;
+    mw_sub_updating = true;
+    auto resolve_count = std::atomic<int>(0);
+    NekoGui::dataStore->resolve_count = profiles.count();
+
+    for (const auto &profile: profiles) {
+        profile->bean->ResolveDomainToIP([=] {
+            profile->Save();
+            if (--NekoGui::dataStore->resolve_count != 0) return;
+            refresh_proxy_list();
+            mw_sub_updating = false;
+        });
     }
 }
 
@@ -1572,11 +1628,20 @@ void MainWindow::on_tabWidget_customContextMenuRequested(const QPoint &p) {
     auto group = NekoGui::profileManager->GetGroup(NekoGui::dataStore->current_group);
     if (NekoGui::profileManager->groups.size() > 1) menu->addAction(deleteAction);
     if (!group->Profiles().empty()) {
+        menu->addAction(ui->actionUrl_Test_Group);
+        menu->addAction(ui->menu_resolve_domain);
         menu->addAction(ui->menu_clear_test_result);
         menu->addAction(ui->menu_delete_repeat);
         menu->addAction(ui->menu_remove_unavailable);
+        menu->addAction(ui->menu_remove_invalid);
     }
     if (!group->url.isEmpty()) menu->addAction(ui->menu_update_subscription);
+    if (!speedtestRunning.tryLock()) {
+        menu->addAction(ui->menu_stop_testing);
+    } else {
+        speedtestRunning.unlock();
+        menu->removeAction(ui->menu_stop_testing);
+    }
     menu->exec(ui->tabWidget->tabBar()->mapToGlobal(p));
     return;
 }
