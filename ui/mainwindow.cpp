@@ -71,7 +71,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     speedTestThreadPool->setMaxThreadCount(10); // constant value
     //
     connect(ui->menu_start, &QAction::triggered, this, [=]() { neko_start(); });
-    connect(ui->menu_stop, &QAction::triggered, this, [=]() { neko_stop(); });
+    connect(ui->menu_stop, &QAction::triggered, this, [=]() { neko_stop(false, false, true); });
     connect(ui->tabWidget->tabBar(), &QTabBar::tabMoved, this, [=](int from, int to) {
         // use tabData to track tab & gid
         NekoGui::profileManager->groupsTabOrder.clear();
@@ -86,6 +86,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->tabWidget->installEventFilter(this);
     //
     RegisterHotkey(false);
+    RegisterShortcuts();
     //
     auto last_size = NekoGui::dataStore->mw_size.split("x");
     if (last_size.length() == 2) {
@@ -1719,6 +1720,14 @@ void MainWindow::RegisterHotkey(bool unregister) {
         } else {
             hk->deleteLater();
         }
+    }
+}
+
+void MainWindow::RegisterShortcuts() {
+    for (const auto &action: ui->menuHidden_menu->actions()) {
+        new QShortcut(action->shortcut(), this, [=](){
+            action->trigger();
+        });
     }
 }
 

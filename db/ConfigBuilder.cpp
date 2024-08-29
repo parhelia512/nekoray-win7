@@ -152,6 +152,15 @@ namespace NekoGui {
         }
         dnsObj["rules"] = dnsRulesObj;
         results->coreConfig["dns"] = dnsObj;
+        std::map<int, QString> outboundMap;
+        outboundMap[-1] = "proxy";
+        outboundMap[-2] = "direct";
+        outboundMap[-3] = "block";
+        outboundMap[-4] = "dns-out";
+        results->coreConfig["route"] = QJsonObject{
+            {"rules", NekoGui::RoutingChain::GetDefaultChain()->get_route_rules(false, outboundMap)},
+            {"auto_detect_interface", true}
+        };
 
         return results;
     }
@@ -482,6 +491,7 @@ namespace NekoGui {
             inboundObj["stack"] = Preset::SingBox::VpnImplementation.value(dataStore->vpn_implementation);
             inboundObj["strict_route"] = dataStore->vpn_strict_route;
             inboundObj["gso"] = dataStore->enable_gso;
+            inboundObj["auto_redirect"] = dataStore->auto_redirect;
             auto tunAddress = QJsonArray{"172.19.0.1/24"};
             if (dataStore->vpn_ipv6) tunAddress += "fdfe:dcba:9876::1/96";
             inboundObj["address"] = tunAddress;

@@ -60,6 +60,12 @@ namespace NekoGui_fmt {
             if (!stream->method.isEmpty()) query.addQueryItem("method", stream->method);
         } else if (stream->network == "grpc") {
             if (!stream->path.isEmpty()) query.addQueryItem("serviceName", stream->path);
+        } else if (stream->network == "tcp") {
+            if (stream->header_type == "http") {
+                if (!stream->path.isEmpty()) query.addQueryItem("path", stream->path);
+                query.addQueryItem("headerType", "http");
+                query.addQueryItem("host", stream->host);
+            }
         }
 
         // mux
@@ -156,6 +162,11 @@ namespace NekoGui_fmt {
             if (!stream->host.isEmpty()) query.addQueryItem("host", stream->host);
         } else if (stream->network == "grpc") {
             if (!stream->path.isEmpty()) query.addQueryItem("serviceName", stream->path);
+        } else if (stream->network == "tcp") {
+            if (stream->header_type == "http") {
+                query.addQueryItem("headerType", "http");
+                query.addQueryItem("host", stream->host);
+            }
         }
 
         // mux
@@ -255,6 +266,7 @@ namespace NekoGui_fmt {
         q.addQueryItem("reserved", FormatReserved());
         q.addQueryItem("mtu", Int2String(MTU));
         q.addQueryItem("use_system_interface", useSystemInterface ? "true":"false");
+        q.addQueryItem("local_address", localAddress.join("-"));
         url.setQuery(q);
         return url.toString(QUrl::FullyEncoded);
     }
