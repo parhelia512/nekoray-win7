@@ -33,19 +33,16 @@ namespace NekoGui_fmt {
         if (!name.isEmpty()) url.setFragment(name);
 
         //  security
-        auto security = stream->security;
-        if (security == "tls" && !stream->reality_pbk.trimmed().isEmpty()) security = "reality";
-        query.addQueryItem("security", security);
+        query.addQueryItem("security", stream->security == "" ? "none" : stream->security);
 
         if (!stream->sni.isEmpty()) query.addQueryItem("sni", stream->sni);
         if (!stream->alpn.isEmpty()) query.addQueryItem("alpn", stream->alpn);
         if (stream->allow_insecure) query.addQueryItem("allowInsecure", "1");
         if (!stream->utlsFingerprint.isEmpty()) query.addQueryItem("fp", stream->utlsFingerprint);
 
-        if (security == "reality") {
+        if (stream->security == "reality") {
             query.addQueryItem("pbk", stream->reality_pbk);
             if (!stream->reality_sid.isEmpty()) query.addQueryItem("sid", stream->reality_sid);
-            if (!stream->reality_spx.isEmpty()) query.addQueryItem("spx", stream->reality_spx);
         }
 
         // type
@@ -136,9 +133,7 @@ namespace NekoGui_fmt {
         query.addQueryItem("encryption", security);
 
         //  security
-        auto security = stream->security;
-        if (security == "tls" && !stream->reality_pbk.trimmed().isEmpty()) security = "reality";
-        query.addQueryItem("security", security);
+        query.addQueryItem("security", stream->security == "" ? "none" : stream->security);
 
         if (!stream->sni.isEmpty()) query.addQueryItem("sni", stream->sni);
         if (stream->allow_insecure) query.addQueryItem("allowInsecure", "1");
@@ -148,10 +143,9 @@ namespace NekoGui_fmt {
             query.addQueryItem("fp", stream->utlsFingerprint);
         }
 
-        if (security == "reality") {
+        if (stream->security == "reality") {
             query.addQueryItem("pbk", stream->reality_pbk);
             if (!stream->reality_sid.isEmpty()) query.addQueryItem("sid", stream->reality_sid);
-            if (!stream->reality_spx.isEmpty()) query.addQueryItem("spx", stream->reality_spx);
         }
 
         // type
@@ -267,6 +261,34 @@ namespace NekoGui_fmt {
         q.addQueryItem("mtu", Int2String(MTU));
         q.addQueryItem("use_system_interface", useSystemInterface ? "true":"false");
         q.addQueryItem("local_address", localAddress.join("-"));
+        q.addQueryItem("workers", Int2String(workerCount));
+        url.setQuery(q);
+        return url.toString(QUrl::FullyEncoded);
+    }
+
+    QString SSHBean::ToShareLink() {
+        QUrl url;
+        url.setScheme("ssh");
+        url.setHost(serverAddress);
+        url.setPort(serverPort);
+        if (!name.isEmpty()) url.setFragment(name);
+        QUrlQuery q;
+        q.addQueryItem("user", user);
+        q.addQueryItem("password", password);
+        q.addQueryItem("private_key", privateKey.toUtf8().toBase64(QByteArray::OmitTrailingEquals));
+        q.addQueryItem("private_key_path", privateKeyPath);
+        q.addQueryItem("private_key_passphrase", privateKeyPass);
+        QStringList b64HostKeys = {};
+        for (const auto& item: hostKey) {
+            b64HostKeys << item.toUtf8().toBase64(QByteArray::OmitTrailingEquals);
+        }
+        q.addQueryItem("host_key", b64HostKeys.join("-"));
+        QStringList b64HostKeyAlgs = {};
+        for (const auto& item: hostKeyAlgs) {
+            b64HostKeyAlgs << item.toUtf8().toBase64(QByteArray::OmitTrailingEquals);
+        }
+        q.addQueryItem("host_key_algorithms", b64HostKeyAlgs.join("-"));
+        q.addQueryItem("client_version", clientVersion);
         url.setQuery(q);
         return url.toString(QUrl::FullyEncoded);
     }

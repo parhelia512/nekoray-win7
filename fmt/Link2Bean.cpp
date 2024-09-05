@@ -61,11 +61,7 @@ namespace NekoGui_fmt {
         }
         stream->network = type;
 
-        if (proxy_type == proxy_Trojan) {
-            stream->security = GetQueryValue(query, "security", "tls").replace("reality", "tls").replace("none", "");
-        } else {
-            stream->security = GetQueryValue(query, "security", "").replace("reality", "tls").replace("none", "");
-        }
+        stream->security = GetQueryValue(query, "security", "").replace("none", "");
         auto sni1 = GetQueryValue(query, "sni");
         auto sni2 = GetQueryValue(query, "peer");
         if (!sni1.isEmpty()) stream->sni = sni1;
@@ -74,7 +70,6 @@ namespace NekoGui_fmt {
         if (!query.queryItemValue("allowInsecure").isEmpty()) stream->allow_insecure = true;
         stream->reality_pbk = GetQueryValue(query, "pbk", "");
         stream->reality_sid = GetQueryValue(query, "sid", "");
-        stream->reality_spx = GetQueryValue(query, "spx", "");
         stream->utlsFingerprint = GetQueryValue(query, "fp", "");
         if (stream->utlsFingerprint.isEmpty()) {
             stream->utlsFingerprint = NekoGui::dataStore->utlsFingerprint;
@@ -220,7 +215,6 @@ namespace NekoGui_fmt {
             if (!query.queryItemValue("allowInsecure").isEmpty()) stream->allow_insecure = true;
             stream->reality_pbk = GetQueryValue(query, "pbk", "");
             stream->reality_sid = GetQueryValue(query, "sid", "");
-            stream->reality_spx = GetQueryValue(query, "spx", "");
             stream->utlsFingerprint = GetQueryValue(query, "fp", "");
             if (stream->utlsFingerprint.isEmpty()) {
                 stream->utlsFingerprint = NekoGui::dataStore->utlsFingerprint;
@@ -367,6 +361,35 @@ namespace NekoGui_fmt {
         }
         MTU = query.queryItemValue("mtu").toInt();
         useSystemInterface = query.queryItemValue("use_system_interface") == "true";
+        workerCount = query.queryItemValue("workers").toInt();
+
+        return true;
+    }
+
+    bool SSHBean::TryParseLink(const QString &link) {
+        auto url = QUrl(link);
+        if (!url.isValid()) return false;
+        auto query = GetQuery(url);
+
+        name = url.fragment(QUrl::FullyDecoded);
+        serverAddress = url.host();
+        serverPort = url.port();
+        user = query.queryItemValue("user");
+        password = query.queryItemValue("password");
+        privateKey = QByteArray::fromBase64(query.queryItemValue("private_key").toUtf8(), QByteArray::OmitTrailingEquals);
+        privateKeyPath = query.queryItemValue("private_key_path");
+        privateKeyPass = query.queryItemValue("private_key_passphrase");
+        auto hostKeysRaw = query.queryItemValue("host_key");
+        for (const auto &item: hostKeysRaw.split("-")) {
+            auto b64hostKey = QByteArray::fromBase64(item.toUtf8(), QByteArray::OmitTrailingEquals);
+            if (!b64hostKey.isEmpty()) hostKey << QString(b64hostKey);
+        }
+        auto hostKeyAlgsRaw = query.queryItemValue("host_key_algorithms");
+        for (const auto &item: hostKeyAlgsRaw.split("-")) {
+            auto b64hostKeyAlg = QByteArray::fromBase64(item.toUtf8(), QByteArray::OmitTrailingEquals);
+            if (!b64hostKeyAlg.isEmpty()) hostKeyAlgs << QString(b64hostKeyAlg);
+        }
+        clientVersion = query.queryItemValue("client_version");
 
         return true;
     }

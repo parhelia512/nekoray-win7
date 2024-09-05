@@ -275,6 +275,7 @@ namespace NekoGui {
         _add(new configItem("vpn_mtu", &vpn_mtu, itemType::integer));
         _add(new configItem("vpn_ipv6", &vpn_ipv6, itemType::boolean));
         _add(new configItem("vpn_strict_route", &vpn_strict_route, itemType::boolean));
+        _add(new configItem("auto_redirect", &auto_redirect, itemType::boolean));
         _add(new configItem("sub_clear", &sub_clear, itemType::boolean));
         _add(new configItem("sub_insecure", &sub_insecure, itemType::boolean));
         _add(new configItem("sub_auto_update", &sub_auto_update, itemType::integer));
@@ -393,6 +394,18 @@ namespace NekoGui {
         return fn;
     }
 
+    QString FindNekorayRealPath() {
+        QString fn;
+#ifdef Q_OS_LINUX
+        fn = QApplication::applicationDirPath() + "/launcher";
+#else
+        fn = QApplication::applicationFilePath();
+#endif
+        auto fi = QFileInfo(fn);
+        if (fi.isSymLink()) return fi.symLinkTarget();
+        return fn;
+    }
+
     short isAdminCache = -1;
 
     // IsAdmin 主要判断：有无权限启动 Tun
@@ -404,7 +417,7 @@ namespace NekoGui {
         admin = Windows_IsInAdmin();
 #else
 #ifdef Q_OS_LINUX
-        admin |= Linux_GetCapString(FindNekoBoxCoreRealPath()).contains("cap_net_admin");
+        admin |= Linux_GetCapString(FindNekorayRealPath()).contains("cap_sys_admin");
 #endif
         admin |= geteuid() == 0;
 #endif

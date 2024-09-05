@@ -8,8 +8,6 @@
 #include <QFile>
 #include <QFileInfo>
 
-#define BOX_UNDERLYING_DNS_EXPORT dataStore->core_box_underlying_dns.isEmpty() ? (status->forExport ? "local" : "underlying://0.0.0.0") : dataStore->core_box_underlying_dns
-
 namespace NekoGui {
 
     QStringList getAutoBypassExternalProcessPaths(const std::shared_ptr<BuildConfigResult> &result) {
@@ -107,7 +105,7 @@ namespace NekoGui {
                 results->error = res->error;
                 return results;
             }
-            if (item->CustomBean() != nullptr && item->CustomBean()->core == "internal-full") {
+            if (item->type == "custom" && item->CustomBean()->core == "internal-full") {
                 res->coreConfig["inbounds"] = QJsonArray();
                 results->fullConfigs[item->id] = QJsonObject2QString(res->coreConfig, true);
                 continue;
@@ -198,7 +196,7 @@ namespace NekoGui {
         auto ents = resolveChain(status->ent);
         if (!status->result->error.isEmpty()) return {};
 
-        if (group->front_proxy_id >= 0) {
+        if (group->front_proxy_id >= 0 && !status->forTest) {
             auto fEnt = profileManager->GetProfile(group->front_proxy_id);
             if (fEnt == nullptr) {
                 status->result->error = QString("front proxy ent not found.");
@@ -208,7 +206,7 @@ namespace NekoGui {
             if (!status->result->error.isEmpty()) return {};
         }
 
-        if (group->landing_proxy_id >= 0) {
+        if (group->landing_proxy_id >= 0 && !status->forTest) {
             auto lEnt = profileManager->GetProfile(group->landing_proxy_id);
             if (lEnt == nullptr) {
                 status->result->error = QString("landing proxy ent not found.");
@@ -617,12 +615,12 @@ namespace NekoGui {
 
         // Direct
         auto directDNSAddress = dataStore->routing->direct_dns;
-        if (directDNSAddress == "localhost") directDNSAddress = BOX_UNDERLYING_DNS_EXPORT;
+        if (directDNSAddress == "localhost") directDNSAddress = "local";
         QJsonObject directObj{
             {"tag", "dns-direct"},
             {"address_resolver", "dns-local"},
             {"strategy", dataStore->routing->direct_dns_strategy},
-            {"address", directDNSAddress.replace("+local://", "://")},
+            {"address", directDNSAddress},
             {"detour", "direct"},
         };
         if (dataStore->routing->dns_final_out == "direct") {
@@ -709,7 +707,7 @@ namespace NekoGui {
         // Underlying 100% Working DNS
         dnsServers += QJsonObject{
             {"tag", "dns-local"},
-            {"address", BOX_UNDERLYING_DNS_EXPORT},
+            {"address", "local"},
             {"detour", "direct"},
         };
 
