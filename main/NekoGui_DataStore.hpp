@@ -8,7 +8,7 @@ namespace NekoGui {
         QString def_outbound = "proxy";
 
         // DNS
-        QString remote_dns = "8.8.8.8";
+        QString remote_dns = "tls://8.8.8.8";
         QString remote_dns_strategy = "";
         QString direct_dns = "localhost";
         QString direct_dns_strategy = "";
@@ -68,17 +68,18 @@ namespace NekoGui {
         bool flag_debug = false;
         bool flag_restart_tun_on = false;
         bool flag_reorder = false;
+        bool flag_dns_set = false;
 
         // Saved
 
         // Misc
-        QString log_level = "warning";
+        QString log_level = "info";
         QString test_latency_url = "http://cp.cloudflare.com/";
-        int test_concurrent = 5;
-        int traffic_loop_interval = 1000;
+        int test_concurrent = 10;
+        int traffic_loop_interval = 500;
         bool disable_traffic_stats = false;
         int current_group = 0; // group id
-        QString mux_protocol = "";
+        QString mux_protocol = "smux";
         bool mux_padding = false;
         int mux_concurrency = 8;
         bool mux_default_on = false;
@@ -123,8 +124,8 @@ namespace NekoGui {
         bool fake_dns = false;
         bool enable_gso = false;
         bool auto_redirect = false;
-        QString vpn_implementation;
-        int vpn_mtu = 9000;
+        QString vpn_implementation = "gvisor";
+        int vpn_mtu = 1500;
         bool vpn_ipv6 = false;
         bool vpn_strict_route = false;
 
@@ -133,6 +134,22 @@ namespace NekoGui {
         QString ntp_server_address = "";
         int ntp_server_port = 0;
         QString ntp_interval = "";
+
+        // Hijack
+        bool enable_dns_server = false;
+        QString dns_server_listen_addr = "127.0.0.1";
+        int dns_server_listen_port = 53;
+        QString dns_v4_resp = "127.0.0.1";
+        QString dns_v6_resp = "::1";
+        QStringList dns_server_rules = {};
+        bool enable_redirect = false;
+        QString redirect_listen_address = "127.0.0.1";
+        int redirect_listen_port = 443;
+
+        // System dns
+        bool system_dns_set = false;
+        bool is_dhcp = false;
+        QStringList system_dns_servers = {};
 
         // Hotkey
         QString hotkey_mainwindow = "";

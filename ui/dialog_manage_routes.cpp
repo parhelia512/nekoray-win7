@@ -9,6 +9,7 @@
 #include <QFile>
 #include <QMessageBox>
 #include <QShortcut>
+#include <rpc/gRPC.h>
 
 void DialogManageRoutes::reloadProfileItems() {
     if (chainList.empty()) {
@@ -36,6 +37,22 @@ void DialogManageRoutes::reloadProfileItems() {
         ui->route_prof->setCurrentIndex(0);
     }
     blocker.unblock();
+}
+
+void DialogManageRoutes::set_dns_hijack_enability(const bool enable) const {
+    ui->dnshijack_listenaddr->setEnabled(enable);
+    ui->dnshijack_listenport->setEnabled(enable);
+    ui->dnshijack_rules->setEnabled(enable);
+    ui->dnshijack_v4resp->setEnabled(enable);
+    ui->dnshijack_v6resp->setEnabled(enable);
+}
+
+bool DialogManageRoutes::validate_dns_rules(const QString &rawString) {
+    auto rules = rawString.split("\n");
+    for (const auto& rule : rules) {
+        if (!rule.trimmed().isEmpty() && !rule.startsWith("ruleset:") && !rule.startsWith("domain:") && !rule.startsWith("suffix:") && !rule.startsWith("regex:")) return false;
+    }
+    return true;
 }
 
 DialogManageRoutes::DialogManageRoutes(QWidget *parent) : QDialog(parent), ui(new Ui::DialogManageRoutes) {
@@ -107,6 +124,52 @@ DialogManageRoutes::DialogManageRoutes(QWidget *parent) : QDialog(parent), ui(ne
         on_delete_route_clicked();
     });
 
+    // hijack
+    ui->dnshijack_enable->setChecked(NekoGui::dataStore->enable_dns_server);
+    set_dns_hijack_enability(NekoGui::dataStore->enable_dns_server);
+    ui->dnshijack_listenaddr->setText(NekoGui::dataStore->dns_server_listen_addr);
+    ui->dnshijack_listenport->setValidator(QRegExpValidator_Number);
+    ui->dnshijack_listenport->setText(Int2String(NekoGui::dataStore->dns_server_listen_port));
+    ui->dnshijack_v4resp->setText(NekoGui::dataStore->dns_v4_resp);
+    ui->dnshijack_v6resp->setText(NekoGui::dataStore->dns_v6_resp);
+    connect(ui->dnshijack_what, &QPushButton::clicked, this, [=] {
+        MessageBoxInfo("What is this?", NekoGui::Information::HijackInfo);
+    });
+
+    bool ok;
+    auto geoIpList = NekoGui_rpc::defaultClient->GetGeoList(&ok, NekoGui_rpc::GeoRuleSetType::ip);
+    auto geoSiteList = NekoGui_rpc::defaultClient->GetGeoList(&ok, NekoGui_rpc::GeoRuleSetType::site);
+    QStringList ruleItems = {"domain:", "suffix:", "regex:"};
+    for (const auto& geoIP : geoIpList) {
+        ruleItems.append("ruleset:"+geoIP);
+    }
+    for (const auto& geoSite: geoSiteList) {
+        ruleItems.append("ruleset:"+geoSite);
+    }
+    rule_editor = new AutoCompleteTextEdit("", ruleItems, this);
+    ui->hijack_box->layout()->replaceWidget(ui->dnshijack_rules, rule_editor);
+    rule_editor->setPlainText(NekoGui::dataStore->dns_server_rules.join("\n"));
+    ui->dnshijack_rules->hide();
+#ifndef Q_OS_LINUX
+    ui->dnshijack_listenport->setVisible(false);
+    ui->dnshijack_listenport_l->setVisible(false);
+#endif
+
+    ui->redirect_enable->setChecked(NekoGui::dataStore->enable_redirect);
+    ui->redirect_listenaddr->setEnabled(NekoGui::dataStore->enable_redirect);
+    ui->redirect_listenaddr->setText(NekoGui::dataStore->redirect_listen_address);
+    ui->redirect_listenport->setEnabled(NekoGui::dataStore->enable_redirect);
+    ui->redirect_listenport->setValidator(QRegExpValidator_Number);
+    ui->redirect_listenport->setText(Int2String(NekoGui::dataStore->redirect_listen_port));
+
+    connect(ui->dnshijack_enable, &QCheckBox::checkStateChanged, this, [=](bool state) {
+        set_dns_hijack_enability(state);
+    });
+    connect(ui->redirect_enable, &QCheckBox::checkStateChanged, this, [=](bool state) {
+        ui->redirect_listenaddr->setEnabled(state);
+        ui->redirect_listenport->setEnabled(state);
+    });
+
     ADD_ASTERISK(this)
 }
 
@@ -121,6 +184,10 @@ DialogManageRoutes::~DialogManageRoutes() {
 void DialogManageRoutes::accept() {
     if (chainList.empty()) {
         MessageBoxInfo("Invalid settings", "Routing profile cannot be empty");
+        return;
+    }
+    if (!validate_dns_rules(rule_editor->toPlainText())) {
+        MessageBoxInfo("Invalid settings", "DNS Rules are not valid");
         return;
     }
 
@@ -140,6 +207,22 @@ void DialogManageRoutes::accept() {
     NekoGui::dataStore->routing->current_route_id = currentRouteProfileID;
     NekoGui::dataStore->routing->def_outbound = ui->default_out->currentText();
 
+    NekoGui::dataStore->enable_dns_server = ui->dnshijack_enable->isChecked();
+    NekoGui::dataStore->dns_server_listen_addr = ui->dnshijack_listenaddr->text();
+    NekoGui::dataStore->dns_server_listen_port = ui->dnshijack_listenport->text().toInt();
+    NekoGui::dataStore->dns_v4_resp = ui->dnshijack_v4resp->text();
+    NekoGui::dataStore->dns_v6_resp = ui->dnshijack_v6resp->text();
+    auto rawRules = rule_editor->toPlainText().split("\n");
+    QStringList dnsRules;
+    for (const auto& rawRule : rawRules) {
+        if (rawRule.trimmed().isEmpty()) continue;
+        dnsRules.append(rawRule.trimmed());
+    }
+    NekoGui::dataStore->dns_server_rules = dnsRules;
+
+    NekoGui::dataStore->enable_redirect = ui->redirect_enable->isChecked();
+    NekoGui::dataStore->redirect_listen_address = ui->redirect_listenaddr->text();
+    NekoGui::dataStore->redirect_listen_port = ui->redirect_listenport->text().toInt();
 
     //
     QStringList msg{"UpdateDataStore"};

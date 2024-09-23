@@ -73,9 +73,7 @@ namespace NekoGui_ConfigItem {
             switch (item->type) {
                 case itemType::string:
                     // Allow Empty
-                    if (!((QString *) item->ptr)->isEmpty()) {
-                        object.insert(item->name, *(QString *) item->ptr);
-                    }
+                    object.insert(item->name, *(QString *) item->ptr);
                     break;
                 case itemType::integer:
                     object.insert(item->name, *(int *) item->ptr);
@@ -295,6 +293,18 @@ namespace NekoGui {
         _add(new configItem("ntp_interval", &ntp_interval, itemType::string));
         _add(new configItem("geoip_download_url", &geoip_download_url, itemType::string));
         _add(new configItem("geosite_download_url", &geosite_download_url, itemType::string));
+        _add(new configItem("enable_dns_server", &enable_dns_server, itemType::boolean));
+        _add(new configItem("dns_server_listen_addr", &dns_server_listen_addr, itemType::string));
+        _add(new configItem("dns_server_listen_port", &dns_server_listen_port, itemType::integer));
+        _add(new configItem("dns_v4_resp", &dns_v4_resp, itemType::string));
+        _add(new configItem("dns_v6_resp", &dns_v6_resp, itemType::string));
+        _add(new configItem("dns_server_rules", &dns_server_rules, itemType::stringList));
+        _add(new configItem("enable_redirect", &enable_redirect, itemType::boolean));
+        _add(new configItem("redirect_listen_address", &redirect_listen_address, itemType::string));
+        _add(new configItem("redirect_listen_port", &redirect_listen_port, itemType::integer));
+        _add(new configItem("system_dns_set", &system_dns_set, itemType::boolean));
+        _add(new configItem("is_dhcp", &is_dhcp, itemType::boolean));
+        _add(new configItem("system_dns_servers", &system_dns_servers, itemType::stringList));
     }
 
     void DataStore::UpdateStartedId(int id) {
@@ -417,7 +427,7 @@ namespace NekoGui {
         admin = Windows_IsInAdmin();
 #else
 #ifdef Q_OS_LINUX
-        admin |= Linux_GetCapString(FindNekorayRealPath()).contains("cap_sys_admin");
+        admin |= Linux_GetCapString(FindNekoBoxCoreRealPath()).contains("cap_sys_admin");
 #endif
         admin |= geteuid() == 0;
 #endif

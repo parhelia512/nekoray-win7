@@ -6,8 +6,8 @@
 #include "db/traffic/TrafficLooper.hpp"
 #include "rpc/gRPC.h"
 #include "ui/widget/MessageBoxTimer.h"
+#include "3rdparty/qv2ray/v2/proxy/QvProxyConfigurator.hpp"
 
-#include <QTimer>
 #include <QInputDialog>
 #include <QPushButton>
 #include <QDesktopServices>
@@ -207,8 +207,56 @@ void MainWindow::stop_core_daemon() {
     NekoGui_rpc::defaultClient->Exit();
 }
 
+bool MainWindow::set_system_dns(bool set, bool save_set) {
+    if (!NekoGui::dataStore->enable_dns_server) {
+        MW_show_log("You need to enable hijack DNS server first");
+        return false;
+    }
+    if (!get_elevated_permissions(4)) {
+        return false;
+    }
+    bool rpcOK;
+    QStringList servers;
+    bool is_dhcp = false;
+    QString res;
+    if (set) {
+        bool ok;
+        auto sysDefaults = defaultClient->GetSystemDNS(&ok);
+        if (!ok) {
+            MW_show_log("Failed to get system dns settings");
+            return false;
+        }
+        QStringList sysDefServers;
+        for (const auto& server : sysDefaults.servers()) {
+            sysDefServers.append(server.c_str());
+        }
+        NekoGui::dataStore->system_dns_servers = sysDefServers;
+        NekoGui::dataStore->is_dhcp = sysDefaults.is_dhcp();
+        servers = {NekoGui::dataStore->dns_server_listen_addr};
+        res = defaultClient->SetSystemDNS(&rpcOK, servers, is_dhcp, false);
+    } else {
+        servers = NekoGui::dataStore->system_dns_servers;
+        is_dhcp = NekoGui::dataStore->is_dhcp;
+        res = defaultClient->SetSystemDNS(&rpcOK, servers, is_dhcp, true);
+    }
+    if (!rpcOK) {
+        MW_show_log("Failed to set system dns: " + res);
+        return false;
+    }
+    if (save_set) NekoGui::dataStore->system_dns_set = set;
+    return true;
+}
+
 void MainWindow::neko_start(int _id) {
     if (NekoGui::dataStore->prepare_exit) return;
+#ifdef Q_OS_LINUX
+    if (NekoGui::dataStore->enable_dns_server && NekoGui::dataStore->dns_server_listen_port <= 1024) {
+        if (!get_elevated_permissions()) {
+            MW_show_log(QString("Failed to get admin access, cannot listen on port %1 without it").arg(NekoGui::dataStore->dns_server_listen_port));
+            return;
+        }
+    }
+#endif
 
     auto ents = get_now_selected_list();
     auto ent = (_id < 0 && !ents.isEmpty()) ? ents.first() : NekoGui::profileManager->GetProfile(_id);
@@ -343,6 +391,7 @@ void MainWindow::neko_start(int _id) {
 
 void MainWindow::neko_set_spmode_system_proxy(bool enable, bool save) {
     if (enable != NekoGui::dataStore->spmode_system_proxy) {
+#ifndef Q_OS_LINUX
         bool ok;
         auto error = defaultClient->SetSystemProxy(&ok, enable);
         if (!ok) {
@@ -351,6 +400,14 @@ void MainWindow::neko_set_spmode_system_proxy(bool enable, bool save) {
             refresh_status();
             return;
         }
+#else
+        if (enable) {
+            auto socks_port = NekoGui::dataStore->inbound_socks_port;
+            SetSystemProxy(socks_port, socks_port);
+        } else {
+            ClearSystemProxy();
+        }
+#endif
     }
 
     if (save) {

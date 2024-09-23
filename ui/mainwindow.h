@@ -60,7 +60,7 @@ public:
 
     void neko_set_spmode_vpn(bool enable, bool save = true);
 
-    bool get_elevated_permissions();
+    bool get_elevated_permissions(int reason = 3);
 
     void show_log_impl(const QString &log);
 
@@ -207,6 +207,8 @@ private:
     void url_test_current();
 
     static void stop_core_daemon();
+
+    bool set_system_dns(bool set, bool save_set = true);
 
     void CheckUpdate();
 

@@ -324,6 +324,17 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
         neko_set_spmode_vpn(false);
     });
     connect(ui->menu_qr, &QAction::triggered, this, [=]() { display_qr_link(false); });
+    connect(ui->system_dns, &QCheckBox::clicked, this, [=](bool checked) {
+        if (const auto ok = set_system_dns(checked); !ok) {
+            ui->system_dns->setChecked(!checked);
+        } else {
+            refresh_status();
+        }
+    });
+    // only windows is supported for now
+#ifndef Q_OS_WIN
+    ui->system_dns->hide();
+#endif
 
     connect(ui->menu_server, &QMenu::aboutToShow, this, [=](){
         if (!speedtestRunning.tryLock()) {
@@ -570,9 +581,15 @@ void MainWindow::dialog_message_impl(const QString &sender, const QString &info)
                 if (NekoGui::dataStore->remember_spmode.contains("vpn") || NekoGui::dataStore->flag_restart_tun_on) {
                     neko_set_spmode_vpn(true, false);
                 }
+                if (NekoGui::dataStore->flag_dns_set) {
+                    set_system_dns(true);
+                }
             }
-
             neko_start(info.split(",")[1].toInt());
+            if (NekoGui::dataStore->system_dns_set) {
+                set_system_dns(true);
+                ui->system_dns->setChecked(true);
+            }
         }
     }
 }
@@ -612,6 +629,9 @@ void MainWindow::on_menu_hotkey_settings_triggered() {
 }
 
 void MainWindow::on_commitDataRequest() {
+    qDebug() << "Handling DNS setting";
+    if (NekoGui::dataStore->system_dns_set) set_system_dns(false, false);
+    qDebug() << "Done handling DNS setting";
     qDebug() << "Start of data save";
     //
     if (!isMaximized()) {
@@ -666,7 +686,7 @@ void MainWindow::on_menu_exit_triggered() {
     if (exit_reason == 1) {
         QDir::setCurrent(QApplication::applicationDirPath());
         QProcess::startDetached("./updater", QStringList{});
-    } else if (exit_reason == 2 || exit_reason == 3) {
+    } else if (exit_reason == 2 || exit_reason == 3 || exit_reason == 4) {
         QDir::setCurrent(QApplication::applicationDirPath());
 
         auto arguments = NekoGui::dataStore->argv;
@@ -680,9 +700,9 @@ void MainWindow::on_menu_exit_triggered() {
         if (isLauncher) arguments.prepend("--");
         auto program = isLauncher ? "./launcher" : QApplication::applicationFilePath();
 
-        if (exit_reason == 3) {
-            // Tun restart as admin
-            arguments << "-flag_restart_tun_on";
+        if (exit_reason == 3 || exit_reason == 4) {
+            if (exit_reason == 3) arguments << "-flag_restart_tun_on";
+            if (exit_reason == 4) arguments << "-flag_restart_dns_set";
 #ifdef Q_OS_WIN
             WinCommander::runProcessElevated(program, arguments, "", WinCommander::SW_NORMAL, false);
 #else
@@ -705,7 +725,7 @@ void MainWindow::neko_toggle_system_proxy() {
     }
 }
 
-bool MainWindow::get_elevated_permissions() {
+bool MainWindow::get_elevated_permissions(int reason) {
     if (NekoGui::IsAdmin()) return true;
 #ifdef Q_OS_LINUX
     if (!Linux_HavePkexec()) {
@@ -714,9 +734,9 @@ bool MainWindow::get_elevated_permissions() {
     }
     auto n = QMessageBox::warning(GetMessageBoxParent(), software_name, tr("Please run Nekoray as admin"), QMessageBox::Yes | QMessageBox::No);
     if (n == QMessageBox::Yes) {
-        auto ret = Linux_Pkexec_SetCapString(NekoGui::FindNekorayRealPath(), "cap_sys_admin=ep");
+        auto ret = Linux_Pkexec_SetCapString(NekoGui::FindNekoBoxCoreRealPath(), "cap_sys_admin=ep");
         if (ret == 0) {
-            this->exit_reason = 3;
+            this->exit_reason = reason;
             on_menu_exit_triggered();
         }
     }
@@ -724,14 +744,13 @@ bool MainWindow::get_elevated_permissions() {
 #ifdef Q_OS_WIN
     auto n = QMessageBox::warning(GetMessageBoxParent(), software_name, tr("Please run Nekoray as admin"), QMessageBox::Yes | QMessageBox::No);
     if (n == QMessageBox::Yes) {
-        this->exit_reason = 3;
+        this->exit_reason = reason;
         on_menu_exit_triggered();
     }
 #endif
 
 #ifdef Q_OS_MACOS
-    MessageBoxWarning("dummy message", "Bypassing restriction for now");
-    return true;
+    MessageBoxWarning("Need administrator privilege", "Enabling TUN mode requires elevated privileges, please run Nekoray as root.");
 #endif
 
     return false;
@@ -837,6 +856,8 @@ void MainWindow::refresh_status(const QString &traffic_update) {
     if (running != nullptr) {
         if (NekoGui::dataStore->spmode_vpn) {
             icon_status_new = Icon::VPN;
+        } else if (NekoGui::dataStore->system_dns_set) {
+            icon_status_new = Icon::DNS;
         } else if (NekoGui::dataStore->spmode_system_proxy) {
             icon_status_new = Icon::SYSTEM_PROXY;
         } else {
@@ -1755,9 +1776,9 @@ void MainWindow::HotkeyEvent(const QString &key) {}
 
 #endif
 bool MainWindow::StopVPNProcess() {
+    vpn_pid = core_process->processId();
     if (vpn_pid != 0) {
         bool ok;
-        vpn_pid = core_process->processId();
 #ifdef Q_OS_WIN
         auto ret = WinCommander::runProcessElevated("taskkill", {"/IM", "nekobox_core.exe",
                                                                  "/FI",
