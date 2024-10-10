@@ -69,16 +69,16 @@ jobs:
         include:
           - platform: windows-2022
             arch: x64
-            qt_version: "6.8.0"
+            qt_version: "6.7.3"
           - platform: ubuntu-22.04
             arch: x64
-            qt_version: "6.8.0"
+            qt_version: "6.7.3"
           - platform: macos-13
             arch: amd64
-            qt_version: "6.8.0"
+            qt_version: "6.7.3"
           - platform: macos-14
             arch: arm64
-            qt_version: "6.8.0"
+            qt_version: "6.7.3"
       fail-fast: false
     runs-on: ${{ matrix.platform }}
     env:
@@ -92,6 +92,7 @@ jobs:
         if: matrix.platform == 'windows-2022'
         uses: ilammy/msvc-dev-cmd@v1.13.0
         with:
+          toolset: 14.2
           arch: ${{ matrix.arch }}
       - name: Download Artifacts
         uses: actions/download-artifact@v4.1.8
@@ -99,19 +100,10 @@ jobs:
           path: download-artifact
       # ========================================================================================================= Qt Install
       - name: Install Qt
-        if: matrix.platform != 'windows-2022'
         uses: jurplel/install-qt-action@v4.0.0
         with:
           version: ${{ matrix.qt_version }}
           setup-python: true
-          cache: true
-          cache-key-prefix: QtCache-${{ matrix.platform }}-${{ matrix.arch }}
-      - name: Install Qt Windows
-        if: matrix.platform == 'windows-2022'
-        uses: jurplel/install-qt-action@v4.0.0
-        with:
-          arch: win64_msvc2022_64
-          version: ${{ matrix.qt_version }}
           cache: true
           cache-key-prefix: QtCache-${{ matrix.platform }}-${{ matrix.arch }}
       # ========================================================================================================= 编译与 Qt 无关的依赖
