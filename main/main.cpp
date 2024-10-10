@@ -61,6 +61,10 @@ int main(int argc, char* argv[]) {
     Windows_SetCrashHandler();
 #endif
 
+#ifdef Q_OS_LINUX
+    QApplication::addLibraryPath(QApplication::applicationDirPath() + "/usr/plugins");
+#endif
+
     QApplication::setAttribute(Qt::AA_DontUseNativeDialogs);
     QApplication::setQuitOnLastWindowClosed(false);
     auto preQApp = new QApplication(argc, argv);
@@ -70,11 +74,6 @@ int main(int argc, char* argv[]) {
     if (QFile::exists("updater.old")) {
         QFile::remove("updater.old");
     }
-#ifndef Q_OS_WIN
-    if (!QFile::exists("updater")) {
-        QFile::link("launcher", "updater");
-    }
-#endif
 
     // Flags
     NekoGui::dataStore->argv = QApplication::arguments();

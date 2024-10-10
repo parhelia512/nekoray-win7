@@ -320,11 +320,7 @@ namespace NekoGui {
         if (isDefault) {
             QString version = SubStrBefore(NKR_VERSION, "-");
             if (!version.contains(".")) version = "2.0";
-            if (IS_NEKO_BOX) {
-                return "NekoBox/PC/" + version + " (Prefer ClashMeta Format)";
-            } else {
-                return "NekoRay/PC/" + version + " (Prefer ClashMeta Format)";
-            }
+            return "Nekoray" + version;
         }
         return user_agent;
     }
@@ -401,19 +397,7 @@ namespace NekoGui {
         auto fn = QApplication::applicationDirPath() + "/nekobox_core";
         auto fi = QFileInfo(fn);
         if (fi.isSymLink()) return fi.symLinkTarget();
-        return fn;
-    }
-
-    QString FindNekorayRealPath() {
-        QString fn;
-#ifdef Q_OS_LINUX
-        fn = QApplication::applicationDirPath() + "/launcher";
-#else
-        fn = QApplication::applicationFilePath();
-#endif
-        auto fi = QFileInfo(fn);
-        if (fi.isSymLink()) return fi.symLinkTarget();
-        return fn;
+        return "'"+fn+"'";
     }
 
     short isAdminCache = -1;
@@ -425,11 +409,12 @@ namespace NekoGui {
         bool admin = false;
 #ifdef Q_OS_WIN
         admin = Windows_IsInAdmin();
-#else
-#ifdef Q_OS_LINUX
-        admin |= Linux_GetCapString(FindNekoBoxCoreRealPath()).contains("cap_sys_admin");
 #endif
-        admin |= geteuid() == 0;
+#ifdef Q_OS_LINUX
+        admin = QFileInfo(FindNekoBoxCoreRealPath()).groupId() == 0;
+#endif
+#ifdef Q_OS_MACOS
+        admin = geteuid() == 0;
 #endif
 
         isAdminCache = admin;
