@@ -1,185 +1,187 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>DialogVPNSettings</class>
- <widget class="QDialog" name="DialogVPNSettings">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>640</width>
-    <height>600</height>
-   </rect>
-  </property>
-  <property name="windowTitle">
-   <string>Tun Settings</string>
-  </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
-   <item>
-    <widget class="QGroupBox" name="groupBox">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_5">
-      <item>
-       <widget class="QLabel" name="label_4">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
+    <class>DialogVPNSettings</class>
+    <widget class="QDialog" name="DialogVPNSettings">
+        <property name="geometry">
+            <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>640</width>
+                <height>600</height>
+            </rect>
         </property>
-        <property name="text">
-         <string notr="true">Stack</string>
+        <property name="windowTitle">
+            <string>Tun Settings</string>
         </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QComboBox" name="vpn_implementation">
-        <property name="editable">
-         <bool>false</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLabel" name="label_10">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string notr="true">MTU</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QComboBox" name="vpn_mtu">
-        <property name="editable">
-         <bool>true</bool>
-        </property>
-        <item>
-         <property name="text">
-          <string notr="true">9000</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string notr="true">1500</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-     </layout>
+        <layout class="QVBoxLayout" name="verticalLayout">
+            <item>
+                <widget class="QGroupBox" name="groupBox">
+                    <property name="sizePolicy">
+                        <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                            <horstretch>0</horstretch>
+                            <verstretch>0</verstretch>
+                        </sizepolicy>
+                    </property>
+                    <layout class="QHBoxLayout" name="horizontalLayout_5">
+                        <item>
+                            <widget class="QLabel" name="label_4">
+                                <property name="sizePolicy">
+                                    <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                                        <horstretch>0</horstretch>
+                                        <verstretch>0</verstretch>
+                                    </sizepolicy>
+                                </property>
+                                <property name="text">
+                                    <string notr="true">Stack</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item>
+                            <widget class="QComboBox" name="vpn_implementation">
+                                <property name="editable">
+                                    <bool>false</bool>
+                                </property>
+                            </widget>
+                        </item>
+                        <item>
+                            <widget class="QLabel" name="label_10">
+                                <property name="sizePolicy">
+                                    <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                                        <horstretch>0</horstretch>
+                                        <verstretch>0</verstretch>
+                                    </sizepolicy>
+                                </property>
+                                <property name="text">
+                                    <string notr="true">MTU</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item>
+                            <widget class="QComboBox" name="vpn_mtu">
+                                <property name="editable">
+                                    <bool>true</bool>
+                                </property>
+                                <item>
+                                    <property name="text">
+                                        <string notr="true">9000</string>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="text">
+                                        <string notr="true">1500</string>
+                                    </property>
+                                </item>
+                            </widget>
+                        </item>
+                    </layout>
+                </widget>
+            </item>
+            <item>
+                <widget class="QGroupBox" name="horizontalGroupBox_2">
+                    <layout class="QHBoxLayout" name="horizontalLayout">
+                        <item>
+                            <widget class="QCheckBox" name="vpn_ipv6">
+                                <property name="text">
+                                    <string>Tun Enable IPv6</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item>
+                            <widget class="QCheckBox" name="strict_route">
+                                <property name="text">
+                                    <string notr="true">Strict Route</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item>
+                            <widget class="Line" name="line">
+                                <property name="orientation">
+                                    <enum>Qt::Orientation::Vertical</enum>
+                                </property>
+                            </widget>
+                        </item>
+                        <item>
+                            <widget class="QCheckBox" name="gso_enable">
+                                <property name="toolTip">
+                                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enables Generic Segmentation
+                                        offloading on the Tun device, Only supported on Linux&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;
+                                    </string>
+                                </property>
+                                <property name="text">
+                                    <string>Enable GSO</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item>
+                            <widget class="QCheckBox" name="auto_redir">
+                                <property name="text">
+                                    <string>Auto Redirect</string>
+                                </property>
+                            </widget>
+                        </item>
+                    </layout>
+                </widget>
+            </item>
+            <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_3">
+                    <item>
+                        <widget class="QPushButton" name="troubleshooting">
+                            <property name="text">
+                                <string>Troubleshooting</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item>
+                        <widget class="QDialogButtonBox" name="buttonBox">
+                            <property name="standardButtons">
+                                <set>QDialogButtonBox::StandardButton::Cancel|QDialogButtonBox::StandardButton::Ok</set>
+                            </property>
+                        </widget>
+                    </item>
+                </layout>
+            </item>
+        </layout>
     </widget>
-   </item>
-   <item>
-    <widget class="QGroupBox" name="horizontalGroupBox_2">
-     <layout class="QHBoxLayout" name="horizontalLayout">
-      <item>
-       <widget class="QCheckBox" name="vpn_ipv6">
-        <property name="text">
-         <string>Tun Enable IPv6</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="strict_route">
-        <property name="text">
-         <string notr="true">Strict Route</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="Line" name="line">
-        <property name="orientation">
-         <enum>Qt::Orientation::Vertical</enum>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="gso_enable">
-        <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enables Generic Segmentation offloading on the Tun device, Only supported on Linux&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-        </property>
-        <property name="text">
-         <string>Enable GSO</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="auto_redir">
-        <property name="text">
-         <string>Auto Redirect</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_3">
-     <item>
-      <widget class="QPushButton" name="troubleshooting">
-       <property name="text">
-        <string>Troubleshooting</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QDialogButtonBox" name="buttonBox">
-       <property name="standardButtons">
-        <set>QDialogButtonBox::StandardButton::Cancel|QDialogButtonBox::StandardButton::Ok</set>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-  </layout>
- </widget>
- <tabstops>
-  <tabstop>vpn_implementation</tabstop>
-  <tabstop>vpn_mtu</tabstop>
-  <tabstop>vpn_ipv6</tabstop>
-  <tabstop>strict_route</tabstop>
-  <tabstop>troubleshooting</tabstop>
- </tabstops>
- <resources/>
- <connections>
-  <connection>
-   <sender>buttonBox</sender>
-   <signal>rejected()</signal>
-   <receiver>DialogVPNSettings</receiver>
-   <slot>reject()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>399</x>
-     <y>575</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>buttonBox</sender>
-   <signal>accepted()</signal>
-   <receiver>DialogVPNSettings</receiver>
-   <slot>accept()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>399</x>
-     <y>575</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+    <tabstops>
+        <tabstop>vpn_implementation</tabstop>
+        <tabstop>vpn_mtu</tabstop>
+        <tabstop>vpn_ipv6</tabstop>
+        <tabstop>strict_route</tabstop>
+        <tabstop>troubleshooting</tabstop>
+    </tabstops>
+    <resources/>
+    <connections>
+        <connection>
+            <sender>buttonBox</sender>
+            <signal>rejected()</signal>
+            <receiver>DialogVPNSettings</receiver>
+            <slot>reject()</slot>
+            <hints>
+                <hint type="sourcelabel">
+                    <x>399</x>
+                    <y>575</y>
+                </hint>
+                <hint type="destinationlabel">
+                    <x>399</x>
+                    <y>299</y>
+                </hint>
+            </hints>
+        </connection>
+        <connection>
+            <sender>buttonBox</sender>
+            <signal>accepted()</signal>
+            <receiver>DialogVPNSettings</receiver>
+            <slot>accept()</slot>
+            <hints>
+                <hint type="sourcelabel">
+                    <x>399</x>
+                    <y>575</y>
+                </hint>
+                <hint type="destinationlabel">
+                    <x>399</x>
+                    <y>299</y>
+                </hint>
+            </hints>
+        </connection>
+    </connections>
 </ui>

@@ -180,15 +180,7 @@ For NekoBox, this rewrites the underlying(localhost) DNS in Tun Mode, normal mod
         <translation>Интервал (в минутах, значение считается неправильным, если меньше 30)</translation>
     </message>
     <message>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Might Improve Ping and Performance&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Disable Traffic Stats</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Settings for the sing-box&apos;s built-in NTP client&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -205,10 +197,6 @@ For NekoBox, this rewrites the underlying(localhost) DNS in Tun Mode, normal mod
     </message>
     <message>
         <source>sync interval</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;In minutes&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -236,19 +224,11 @@ For NekoBox, this rewrites the underlying(localhost) DNS in Tun Mode, normal mod
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove the currently generated rule-sets so that they can be regenerated&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Remove Generated Rule-sets</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <source>GeoIP URL</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Sets the URL to the latest sing-geoip release URL&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -260,10 +240,6 @@ For NekoBox, this rewrites the underlying(localhost) DNS in Tun Mode, normal mod
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Sets the URL to the latest sing-geosite release URL&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Use Sing-Geosite</source>
         <translation type="unfinished"></translation>
     </message>
@@ -272,7 +248,50 @@ For NekoBox, this rewrites the underlying(localhost) DNS in Tun Mode, normal mod
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Socks + HTTP Proxy&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Socks
+                                                                + HTTP Proxy&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;
+                                                            </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Font</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Might
+                                                                            Improve Ping and Performance&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;
+                                                                        </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Settings for the
+                                            sing-box&apos;s built-in NTP client&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;
+                                        </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;In
+                                                                minutes&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;
+                                                            </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove the
+                                                        currently generated rule-sets so that they can be regenerated&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;
+                                                    </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Sets
+                                                                            the URL to the latest sing-geoip release URL&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;
+                                                                        </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Sets
+                                                                            the URL to the latest sing-geosite release
+                                                                            URL&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;
+                                                                        </source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -394,24 +413,12 @@ For NekoBox, this rewrites the underlying(localhost) DNS in Tun Mode, normal mod
         <translation>Настройки</translation>
     </message>
     <message>
-        <source>The underlying transport method. It must be consistent with the server, otherwise, the connection cannot be established.</source>
-        <translation>Нижележащий транспорт. Должен соответствовать конфигурации сервера, иначе подключение будет невозможно.</translation>
-    </message>
-    <message>
         <source>Network</source>
         <translation>Транспорт</translation>
     </message>
     <message>
-        <source>Transport Layer Security. It must be consistent with the server, otherwise, the connection cannot be established.</source>
-        <translation>TLS. Должно совпадать с параметрами сервера, иначе подключение будет невозможно.</translation>
-    </message>
-    <message>
         <source>Security</source>
         <translation>Безопасность</translation>
-    </message>
-    <message>
-        <source>UDP FullCone Packet encoding for implementing features such as UDP FullCone. Server support is required, if the wrong selection is made, the connection cannot be made. Please leave it blank.</source>
-        <translation>UDP FullCone кодирование пакетов для реализации функционала типа UDP FullCone. Необходима поддержка со стороны сервера, при неправильном выборе подключение не будет работать. Оставьте пустым, если вы не знаете что и зачем это.</translation>
     </message>
     <message>
         <source>Packet Encoding</source>
@@ -446,10 +453,6 @@ For NekoBox, this rewrites the underlying(localhost) DNS in Tun Mode, normal mod
         <translation>Настройки TLS</translation>
     </message>
     <message>
-        <source>When enabled, V2Ray will not check the validity of the TLS certificate provided by the remote host (the security is equivalent to plaintext)</source>
-        <translation>Если вкл., то  клиент не будет проверять валидность TLS-сертификата, предоставленного сервером</translation>
-    </message>
-    <message>
         <source>Allow insecure</source>
         <translation>Разрешить небезопасн.</translation>
     </message>
@@ -462,16 +465,8 @@ For NekoBox, this rewrites the underlying(localhost) DNS in Tun Mode, normal mod
         <translation>SNI (идентификатор сервера, передается в открытом виде).</translation>
     </message>
     <message>
-        <source>Application layer protocol negotiation, clear text. Please separate them with commas.</source>
-        <translation>ALPN, идентификатор протокола приложения, передается открытым текстом. Используйте запятую в качестве разделителя.</translation>
-    </message>
-    <message>
         <source>TLS Camouflage Settings</source>
         <translation>Настройки маскировки TLS</translation>
-    </message>
-    <message>
-        <source>Reality public key. If not empty, turn TLS into REALITY.</source>
-        <translation>Публичный ключ Reality. Если задано значение, то будет использован протокол Reality для TLS.</translation>
     </message>
     <message>
         <source>Custom (%1 outbound)</source>
@@ -502,15 +497,7 @@ For NekoBox, this rewrites the underlying(localhost) DNS in Tun Mode, normal mod
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Overrides mux to On&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Enable TCP Brutal</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Server to Client TCP Brutal Speed&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -530,10 +517,6 @@ For NekoBox, this rewrites the underlying(localhost) DNS in Tun Mode, normal mod
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Method of http request, will be converted to uppercase&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Method</source>
         <translation type="unfinished"></translation>
     </message>
@@ -547,6 +530,63 @@ For NekoBox, this rewrites the underlying(localhost) DNS in Tun Mode, normal mod
     </message>
     <message>
         <source>header type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>When enabled, V2Ray will not check the validity of the
+                                                            TLS certificate provided by the remote host (the security is
+                                                            equivalent to plaintext)
+                                                        </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Application layer protocol negotiation, clear text.
+                                                            Please separate them with commas.
+                                                        </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The underlying transport method. It must be consistent
+                                                            with the server, otherwise, the connection cannot be
+                                                            established.
+                                                        </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Transport Layer Security. It must be consistent with the
+                                                            server, otherwise, the connection cannot be established.
+                                                        </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>UDP FullCone Packet encoding for implementing features
+                                                            such as UDP FullCone. Server support is required, if the
+                                                            wrong selection is made, the connection cannot be made.
+                                                            Please leave it blank.
+                                                        </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Overrides
+                                                                mux to On&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;
+                                                            </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Server
+                                                                to Client TCP Brutal Speed&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;
+                                                            </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Method of http
+                                                    request, will be converted to uppercase&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;
+                                                </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Reality public key. If not empty, turn TLS into REALITY.
+                                                </source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -667,21 +707,7 @@ For NekoBox, this rewrites the underlying(localhost) DNS in Tun Mode, normal mod
         <translation>Outbound по-умолчанию</translation>
     </message>
     <message>
-        <source>This is especially important and it is recommended to use the default value of &quot;localhost&quot;.
-If the default value does not work, try changing it to &quot;223.5.5.5&quot;.
-For more information, see the document &quot;Configuration/DNS&quot;.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Sniffs the connections intial packet(s?) to identify the protocol and the SNI. Sniff result for destination also rewrites the destionation of the connection to the sniffed SNI. For more data on the sniffed protocol refer to the sing-box&apos;s documentation.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Routing Profile</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>The outbound tag to use when the request is not handled by any rule</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -709,12 +735,6 @@ For more information, see the document &quot;Configuration/DNS&quot;.</source>
         <translation type="unfinished">Удалить</translation>
     </message>
     <message>
-        <source>outbound.domain_strategy
-when set, domain destinations are resolved to IP before connect,
-also if the connection cannot be established with the current address family (ipv4, ipv6), a fallback connection is created shortly after, with the other address family.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Outbound Domain Strategy</source>
         <translation type="unfinished"></translation>
     </message>
@@ -725,6 +745,92 @@ also if the connection cannot be established with the current address family (ip
     <message>
         <source>Enable FakeIP</source>
         <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The outbound tag to use when the request is not handled by
+                                                        any rule
+                                                    </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>outbound.domain_strategy
+                                                        when set, domain destinations are resolved to IP before connect,
+                                                        also if the connection cannot be established with the current
+                                                        address family (ipv4, ipv6), a fallback connection is created
+                                                        shortly after, with the other address family.
+                                                    </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sniffs the connections intial packet(s?) to identify the
+                                                        protocol and the SNI. Sniff result for destination also rewrites
+                                                        the destionation of the connection to the sniffed SNI. For more
+                                                        data on the sniffed protocol refer to the sing-box&apos;s
+                                                        documentation.
+                                                    </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Hijack</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>DNS Server</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enable</source>
+        <translation type="unfinished">Вкл</translation>
+    </message>
+    <message>
+        <source>How does it work?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Listen Address</source>
+        <translation type="unfinished">Адрес входящих подключений</translation>
+    </message>
+    <message>
+        <source>Listen Port</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Following
+                                                        format should be used:&lt;br/&gt;domain:a.com&lt;/p&gt;&lt;p&gt;suffix:a.com&lt;/p&gt;&lt;p&gt;regex:someregex&lt;/p&gt;&lt;p&gt;rule_set:nameOfRuleSet&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;
+                                                    </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Rules</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>IPv4 Response</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>IPv6 Response</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Redirect Settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This is especially important and it is recommended to use
+                                                        the default value of &quot;localhost&quot;.
+                                                        If the default value does not work, try changing it to &quot;223.5.5.5&quot;.
+                                                        For more information, see the document &quot;Configuration/DNS&quot;.
+                                                    </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>tls://8.8.8.8</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Clone</source>
+        <translation type="unfinished">Клонировать</translation>
     </message>
 </context>
 <context>
@@ -760,15 +866,17 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
         <translation>Отмена</translation>
     </message>
     <message>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enables Generic Segmentation offloading on the Tun device, Only supported on Linux&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Enable GSO</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Auto Redirect</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enables Generic Segmentation
+                                        offloading on the Tun device, Only supported on Linux&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;
+                                    </source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -896,20 +1004,12 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
         <translation>Выкл. MTU discovery</translation>
     </message>
     <message>
-        <source>Hop Interval (s)</source>
-        <translation></translation>
-    </message>
-    <message>
         <source>Certificate</source>
         <translation>Сертификат</translation>
     </message>
     <message>
         <source>Allow Insecure</source>
         <translation>Разрешить небезопасные</translation>
-    </message>
-    <message>
-        <source>Hop Port</source>
-        <translation></translation>
     </message>
     <message>
         <source>Upload (Mbps)</source>
@@ -957,6 +1057,49 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
     </message>
     <message>
         <source>Force use external core</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>EditSSH</name>
+    <message>
+        <source>EditSSH</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>User</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Password</source>
+        <translation type="unfinished">Пароль</translation>
+    </message>
+    <message>
+        <source>Private Key</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Private Key Password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Host Key</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Host Key Algorithms</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Client Version</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Private Key Path</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choose File</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1592,6 +1735,14 @@ Split by line.</source>
     </message>
     <message>
         <source>Replace domain server addresses with their resolved IPs?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>System DNS</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Please give the core root privileges</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
