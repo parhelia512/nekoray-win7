@@ -85,6 +85,8 @@ namespace NekoGui {
         bool mux_default_on = false;
         QString theme = "0";
         int language = 0;
+        QString font = "";
+        int font_size = 0;
         QString mw_size = "";
         QStringList log_ignore = {};
         bool start_minimal = false;
@@ -127,7 +129,7 @@ namespace NekoGui {
         QString vpn_implementation = "gvisor";
         int vpn_mtu = 1500;
         bool vpn_ipv6 = false;
-        bool vpn_strict_route = false;
+        bool vpn_strict_route = true;
 
         // NTP
         bool enable_ntp = false;

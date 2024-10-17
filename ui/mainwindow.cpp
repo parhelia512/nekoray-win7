@@ -100,9 +100,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     // software_name
     software_name = "NekoBox";
     software_core_name = "sing-box";
-    // replace default values
-    if (NekoGui::dataStore->log_level == "warning") NekoGui::dataStore->log_level = "info";
-    if (NekoGui::dataStore->mux_protocol.isEmpty()) NekoGui::dataStore->mux_protocol = "h2mux";
     //
     if (QDir("dashboard").count() == 0) {
         QDir().mkdir("dashboard");
@@ -695,6 +692,7 @@ void MainWindow::on_menu_exit_triggered() {
             arguments.removeAll("-tray");
             arguments.removeAll("-flag_restart_tun_on");
             arguments.removeAll("-flag_reorder");
+            arguments.removeAll("-flag_restart_dns_set");
         }
         auto program = QApplication::applicationFilePath();
 

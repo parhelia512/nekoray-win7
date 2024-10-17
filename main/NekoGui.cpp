@@ -258,6 +258,8 @@ namespace NekoGui {
         _add(new configItem("remember_id", &remember_id, itemType::integer));
         _add(new configItem("remember_enable", &remember_enable, itemType::boolean));
         _add(new configItem("language", &language, itemType::integer));
+        _add(new configItem("font", &font, itemType::string));
+        _add(new configItem("font_size", &font_size, itemType::integer));
         _add(new configItem("spmode2", &remember_spmode, itemType::stringList));
         _add(new configItem("skip_cert", &skip_cert, itemType::boolean));
         _add(new configItem("hk_mw", &hotkey_mainwindow, itemType::string));
@@ -381,6 +383,7 @@ namespace NekoGui {
         search << "/usr/share/sing-geoip";
         search << "/usr/share/sing-geosite";
         search << "/usr/share/v2ray";
+        search << "/usr/share/sing-box";
         search << "/usr/local/share/v2ray";
         search << "/opt/v2ray";
         for (const auto &dir: search) {

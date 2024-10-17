@@ -2,6 +2,7 @@ package boxdns
 
 import (
 	"context"
+	"github.com/sagernet/sing/common/control"
 	"log"
 	"net/netip"
 	"strings"
@@ -32,12 +33,23 @@ func init() {
 	})
 	logger := logFactory.NewLogger("windows-dns")
 
+	ifcFinder := control.NewDefaultInterfaceFinder()
 	monitorNU, _ = tun.NewNetworkUpdateMonitor(logger)
-	monitorDI, _ = tun.NewDefaultInterfaceMonitor(monitorNU, logger, tun.DefaultInterfaceMonitorOptions{})
+	monitorDI, _ = tun.NewDefaultInterfaceMonitor(monitorNU, logger, tun.DefaultInterfaceMonitorOptions{
+		InterfaceFinder: ifcFinder,
+	})
 	monitorDI.RegisterCallback(monitorForUnderlyingDNS)
 	monitorDI.RegisterCallback(handleInterfaceChange)
 	monitorDI.Start()
 	monitorNU.Start()
+	ifcFinder.Update()
+
+	go func() {
+		for {
+			time.Sleep(5 * time.Second)
+			monitorForUnderlyingDNS(0) // to handle wifi change
+		}
+	}()
 }
 
 func monitorForUnderlyingDNS(event int) {
@@ -54,8 +66,10 @@ func monitorForUnderlyingDNS(event int) {
 		guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7],
 	})
 	guidStr := "{" + u.String() + "}"
-	underlyingDNS = getFirstDNS(guidStr)
-	log.Println("underlyingDNS:", guidStr, underlyingDNS)
+	if getFirstDNS(guidStr) != underlyingDNS {
+		underlyingDNS = getFirstDNS(guidStr)
+		log.Println("underlyingDNS:", guidStr, underlyingDNS)
+	}
 }
 
 func getFirstDNS(guid string) string {
@@ -83,7 +97,7 @@ func getNameServersForInterface(guid string) ([]string, error) {
 		}
 		s = strings.ReplaceAll(s, ",", " ")
 		for _, server := range strings.Split(s, " ") {
-			if server != "" {
+			if server != "" && server != "127.0.0.1" {
 				nameservers = append(nameservers, server)
 			}
 		}
