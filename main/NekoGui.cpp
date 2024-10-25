@@ -1,13 +1,14 @@
 #include "NekoGui.hpp"
 #include "fmt/Preset.hpp"
 
-#include <QFile>
-#include <QDir>
 #include <QApplication>
+#include <QDir>
+#include <QFile>
 #include <QFileInfo>
-#include <QJsonObject>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QJsonObject>
+#include <QStandardPaths>
 
 #ifdef Q_OS_WIN
 #include "sys/windows/guihelper.h"
@@ -424,4 +425,16 @@ namespace NekoGui {
         return admin;
     };
 
+    QString GetBasePath() {
+        if (dataStore->flag_use_appdata) return QStandardPaths::writableLocation(
+              QStandardPaths::AppConfigLocation);
+        return qApp->applicationDirPath();
+    }
+
+    bool NeedGeoAssets(){
+        auto path = GetBasePath();
+        auto geoIP = QFile(path + "/geoip.db");
+        auto geoSite = QFile(path + "/geosite.db");
+        return !geoIP.exists() || !geoSite.exists();
+    }
 } // namespace NekoGui

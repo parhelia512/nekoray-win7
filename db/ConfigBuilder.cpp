@@ -546,10 +546,10 @@ namespace NekoGui {
 
         // Routing
         // geopath
-        auto geoip = FindCoreAsset("geoip.db");
-        auto geosite = FindCoreAsset("geosite.db");
-        if (geoip.isEmpty()) status->result->error = +"geoip.db not found, it is needed for generating rule sets";
-        if (geosite.isEmpty()) status->result->error = +"geosite.db not found, it is needed for generating rule sets";
+        if (NeedGeoAssets()) {
+            status->result->error = "Geo Assets are missing, please download them through Basic Settings -> Assets";
+            return;
+        }
 
         // manage routing section
         auto routeObj = QJsonObject();
@@ -633,7 +633,7 @@ namespace NekoGui {
             };
             if (QFile(QString(RULE_SETS_DIR + "/%1.srs").arg(item)).exists()) continue;
             bool ok;
-            auto err = NekoGui_rpc::defaultClient->CompileGeoSet(&ok, item.contains("_IP") ? NekoGui_rpc::GeoRuleSetType::ip : NekoGui_rpc::GeoRuleSetType::site, item.toStdString());
+            auto err = NekoGui_rpc::defaultClient->CompileGeoSet(&ok, item.contains("_IP") ? NekoGui_rpc::GeoRuleSetType::ip : NekoGui_rpc::GeoRuleSetType::site, item.toStdString(), GetBasePath());
             if (!ok) {
                 MW_show_log("Failed to generate rule set asset for " + item);
                 status->result->error = err;
