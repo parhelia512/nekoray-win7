@@ -1,8 +1,5 @@
-//
-// Created by Mahdi on 11/21/2024.
-//
+#pragma once
 
-#ifndef MACOS_H
-#define MACOS_H
+#include <QString>
 
-#endif //MACOS_H
+int Mac_Run_Command(const QString &command);
