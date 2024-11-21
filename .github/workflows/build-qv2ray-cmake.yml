@@ -100,7 +100,7 @@ jobs:
       # ========================================================================================================= Qt Install
       - name: Install Qt
         if: matrix.platform != 'windows-2022'
-        uses: jurplel/install-qt-action@v4.0.0
+        uses: jurplel/install-qt-action@v4.1.1
         with:
           version: ${{ matrix.qt_version }}
           setup-python: true
@@ -108,9 +108,8 @@ jobs:
           cache-key-prefix: QtCache-${{ matrix.platform }}-${{ matrix.arch }}
       - name: Install Qt Windows
         if: matrix.platform == 'windows-2022'
-        uses: jurplel/install-qt-action@v4.0.0
+        uses: jurplel/install-qt-action@v4.1.1
         with:
-          arch: win64_msvc2022_64
           version: ${{ matrix.qt_version }}
           cache: true
           cache-key-prefix: QtCache-${{ matrix.platform }}-${{ matrix.arch }}

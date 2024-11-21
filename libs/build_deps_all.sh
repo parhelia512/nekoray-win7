@@ -50,7 +50,7 @@ ninja && ninja install
 cd ../..
 
 #### protobuf ####
-git clone --recurse-submodules -b v28.2 --depth 1 --shallow-submodules https://github.com/protocolbuffers/protobuf
+git clone --recurse-submodules -b v28.3 --depth 1 --shallow-submodules https://github.com/protocolbuffers/protobuf
 
 mkdir -p protobuf/build
 cd protobuf/build
@@ -61,7 +61,8 @@ $cmake .. -GNinja \
   -Dprotobuf_MSVC_STATIC_RUNTIME=OFF \
   -Dprotobuf_BUILD_TESTS=OFF \
   -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX \
-  -DCMAKE_CXX_STANDARD=17
+  -DCMAKE_CXX_STANDARD=17 \
+  -DCMAKE_C_STANDARD=11
 ninja && ninja install
 
 cd ../..
