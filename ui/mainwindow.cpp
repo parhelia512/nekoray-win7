@@ -671,6 +671,14 @@ void MainWindow::on_commitDataRequest() {
 }
 
 void MainWindow::on_menu_exit_triggered() {
+    if (exit_reason == 5)
+    {
+        #ifdef Q_OS_WIN
+        WinCommander::runProcessElevated(QApplication::applicationFilePath(), {}, "", WinCommander::SW_NORMAL, false);
+        QApplication::quit();
+        return;
+        #endif
+    }
     if (mu_exit.tryLock()) {
         NekoGui::dataStore->prepare_exit = true;
         //
