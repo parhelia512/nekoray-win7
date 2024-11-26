@@ -769,26 +769,20 @@ bool MainWindow::get_elevated_permissions(int reason) {
 #ifdef Q_OS_MACOS
     if (NekoGui::IsAdmin(true))
     {
-        StopVPNProcess();
+        this->exit_reason = reason;
+        on_menu_exit_triggered();
         return true;
     }
     auto n = QMessageBox::warning(GetMessageBoxParent(), software_name, tr("Please give the core root privileges"), QMessageBox::Yes | QMessageBox::No);
     if (n == QMessageBox::Yes)
     {
-        auto chmodCommand = QString("chmod u+s " + NekoGui::FindNekoBoxCoreRealPath());
-        auto ret = Mac_Run_Command(chmodCommand);
-        if (ret != 0)
-        {
-            MW_show_log(QString("Failed to run %1 with code %2").arg(chmodCommand).arg(ret));
-            return false;
-        }
-        auto chownCommand = QString("sudo chown root:wheel " + NekoGui::FindNekoBoxCoreRealPath());
-        ret = Mac_Run_Command(chownCommand);
+        auto Command = QString("sudo chown root:wheel " + NekoGui::FindNekoBoxCoreRealPath() + " && " + "sudo chmod u+s "+NekoGui::FindNekoBoxCoreRealPath());
+        auto ret = Mac_Run_Command(Command);
         if (ret == 0) {
             MessageBoxInfo(tr("Requesting permission"), tr("Please Enter your password in the opened terminal, then try again"));
             return false;
         } else {
-            MW_show_log(QString("Failed to run %1 with %2").arg(chownCommand).arg(ret));
+            MW_show_log(QString("Failed to run %1 with %2").arg(Command).arg(ret));
             return false;
         }
     }
@@ -1824,14 +1818,15 @@ bool MainWindow::StopVPNProcess() {
                                                                  "/FI",
                                                                  "PID ne " + Int2String(core_process->processId())});
         ok = ret == 0;
-#else
-        QProcess p;
-#ifdef Q_OS_MACOS
-        p.start("osascript", {"-e", QString("do shell script \"%1\" with administrator privileges")
-                                        .arg("pkill -2 -U 0 nekobox_core")});
-#else
-        p.start("pkexec", {"pkill", "-2", "-P", Int2String(vpn_pid)});
 #endif
+
+#ifdef Q_OS_MACOS
+        auto ret = Mac_Run_Command("sudo kill -9 " + Int2String(vpn_pid));
+        ok = ret == 0;
+#endif
+#ifdef Q_OS_LINUX
+        QProcess p;
+        p.start("pkexec", {"pkill", "-2", "-P", Int2String(vpn_pid)});
         p.waitForFinished();
         ok = p.exitCode() == 0;
 #endif
