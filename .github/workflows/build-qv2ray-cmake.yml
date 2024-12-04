@@ -68,7 +68,7 @@ jobs:
       matrix:
         include:
           - platform: windows-latest
-            qt_version: "6.8.1"
+            qt_version: "6.7.3"
             target: amd64
           - platform: ubuntu-latest
             qt_version: "6.8.1"
