@@ -274,11 +274,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     tray = new QSystemTrayIcon(this);
     tray->setIcon(Icon::GetTrayIcon(Icon::NONE));
     tray->show();
+    tray->setContextMenu(ui->menu_program);
     connect(tray, &QSystemTrayIcon::activated, this, [=](QSystemTrayIcon::ActivationReason reason) {
-        if (reason == QSystemTrayIcon::Context)
-        {
-            ui->menu_program->exec(QCursor::pos());
-        }
         if (reason == QSystemTrayIcon::Trigger) {
             if (this->isVisible()) {
                 hide();
