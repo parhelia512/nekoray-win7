@@ -11,6 +11,8 @@ import (
 	grpc_server "nekobox_core/server"
 	"nekobox_core/server/gen"
 	"os"
+	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
@@ -48,6 +50,13 @@ func (s *server) Start(ctx context.Context, in *gen.LoadConfigReq) (out *gen.Err
 	}
 
 	instance, instance_cancel, err = boxmain.Create([]byte(in.CoreConfig))
+	if runtime.GOOS == "darwin" && strings.Contains(in.CoreConfig, "utun") {
+		err = exec.Command("bash", "./set_dns.sh").Run()
+		if err != nil {
+			log.Println("Failed to set DNS for darwin:", err)
+		}
+		needUnsetDNS = true
+	}
 
 	if instance != nil {
 		// Logger
@@ -78,6 +87,13 @@ func (s *server) Stop(ctx context.Context, in *gen.EmptyReq) (out *gen.ErrorResp
 		return
 	}
 
+	if needUnsetDNS {
+		needUnsetDNS = false
+		err = exec.Command("bash", "./unset_dns.sh").Run()
+		if err != nil {
+			log.Println("Failed to unset DNS:", err)
+		}
+	}
 	instance.CloseWithTimeout(instance_cancel, time.Second*2, log.Println)
 
 	instance = nil

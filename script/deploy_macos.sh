@@ -23,6 +23,7 @@ cd ../..
 
 mv deployment/public_res/* deployment/macos-$ARCH
 mv deployment/macos-$ARCH/* $BUILD/nekoray.app/Contents/MacOS
+cp $SRC_ROOT/core/cmd/nekobox_core/script/* $BUILD/nekoray.app/Contents/MacOS
 
 #### deploy qt & DLL runtime => .app ####
 pushd $BUILD
