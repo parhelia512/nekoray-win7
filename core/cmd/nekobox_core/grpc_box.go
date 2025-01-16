@@ -51,7 +51,7 @@ func (s *server) Start(ctx context.Context, in *gen.LoadConfigReq) (out *gen.Err
 
 	instance, instance_cancel, err = boxmain.Create([]byte(in.CoreConfig))
 	if runtime.GOOS == "darwin" && strings.Contains(in.CoreConfig, "utun") {
-		err = exec.Command("bash", "./set_dns.sh").Run()
+		err := exec.Command("bash", "./set_dns.sh").Run()
 		if err != nil {
 			log.Println("Failed to set DNS for darwin:", err)
 		}
@@ -89,7 +89,7 @@ func (s *server) Stop(ctx context.Context, in *gen.EmptyReq) (out *gen.ErrorResp
 
 	if needUnsetDNS {
 		needUnsetDNS = false
-		err = exec.Command("bash", "./unset_dns.sh").Run()
+		err := exec.Command("bash", "./unset_dns.sh").Run()
 		if err != nil {
 			log.Println("Failed to unset DNS:", err)
 		}
