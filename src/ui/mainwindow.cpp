@@ -251,8 +251,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     });
 
     // setup Traffic Graph
-    trafficGraph = new TrafficChart();
-    ui->graph_tab->layout()->addWidget(trafficGraph->getChartView());
+    // trafficGraph = new TrafficChart();
+    // ui->graph_tab->layout()->addWidget(trafficGraph->getChartView());
 
     // table UI
     ui->proxyListTable->callback_save_order = [=] {
