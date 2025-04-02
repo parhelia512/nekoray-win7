@@ -17,7 +17,6 @@
 
 #ifdef Q_OS_WIN
 #include "include/sys/windows/MiniDump.h"
-#include "include/sys/windows/vcCheck.h"
 #include "include/sys/windows/eventHandler.h"
 #pragma comment (lib, "cpr.lib")
 #pragma comment (lib, "libcurl.lib")
