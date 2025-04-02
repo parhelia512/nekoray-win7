@@ -17,6 +17,8 @@
 
 #ifdef Q_OS_WIN
 #include "include/sys/windows/MiniDump.h"
+#include "include/sys/windows/vcCheck.h"
+#include "include/sys/windows/eventHandler.h"
 #pragma comment (lib, "cpr.lib")
 #pragma comment (lib, "libcurl.lib")
 #pragma comment (lib, "Ws2_32.lib")
@@ -25,9 +27,9 @@
 #endif
 
 void signal_handler(int signum) {
-    if (qApp) {
-        GetMainWindow()->on_commitDataRequest();
-        qApp->exit();
+    if (GetMainWindow()) {
+        GetMainWindow()->prepare_exit();
+        qApp->quit();
     }
 }
 
@@ -232,6 +234,11 @@ int main(int argc, char* argv[]) {
         // raise main window
         MW_dialog_message("", "Raise");
     });
+
+#ifdef Q_OS_WIN
+    auto eventFilter = new PowerOffTaskkillFilter(signal_handler);
+    a.installNativeEventFilter(eventFilter);
+#endif
 
     UI_InitMainWindow();
     return QApplication::exec();

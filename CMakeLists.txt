@@ -210,6 +210,7 @@ set(PROJECT_SOURCES
         src/configs/proxy/Json2Bean.cpp
         include/ui/utils/TrafficChart.h
         include/ui/utils/CustomChartView.h
+        include/sys/windows/eventHandler.h
 )
 
 # Qt exe
