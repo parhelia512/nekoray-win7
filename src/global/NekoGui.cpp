@@ -274,7 +274,6 @@ namespace NekoGui {
         _add(new configItem("vpn_mtu", &vpn_mtu, itemType::integer));
         _add(new configItem("vpn_ipv6", &vpn_ipv6, itemType::boolean));
         _add(new configItem("vpn_strict_route", &vpn_strict_route, itemType::boolean));
-        _add(new configItem("auto_redirect", &auto_redirect, itemType::boolean));
         _add(new configItem("sub_clear", &sub_clear, itemType::boolean));
         _add(new configItem("sub_insecure", &sub_insecure, itemType::boolean));
         _add(new configItem("sub_auto_update", &sub_auto_update, itemType::integer));
@@ -304,11 +303,11 @@ namespace NekoGui {
         _add(new configItem("redirect_listen_port", &redirect_listen_port, itemType::integer));
         _add(new configItem("system_dns_set", &system_dns_set, itemType::boolean));
         _add(new configItem("is_dhcp", &is_dhcp, itemType::boolean));
-        _add(new configItem("system_dns_servers", &system_dns_servers, itemType::stringList));
         _add(new configItem("windows_set_admin", &windows_set_admin, itemType::boolean));
         _add(new configItem("enable_stats", &enable_stats, itemType::boolean));
         _add(new configItem("stats_tab", &stats_tab, itemType::string));
         _add(new configItem("proxy_scheme", &proxy_scheme, itemType::string));
+        _add(new configItem("disable_privilege_req", &disable_privilege_req, itemType::boolean));
     }
 
     void DataStore::UpdateStartedId(int id) {
@@ -354,24 +353,6 @@ namespace NekoGui {
 
     // System Utils
 
-    QString FindCoreAsset(const QString &name) {
-        QStringList search{QApplication::applicationDirPath()};
-        search << "/usr/share/sing-geoip";
-        search << "/usr/share/sing-geosite";
-        search << "/usr/share/v2ray";
-        search << "/usr/share/sing-box";
-        search << "/usr/local/share/v2ray";
-        search << "/opt/v2ray";
-        for (const auto &dir: search) {
-            if (dir.isEmpty()) continue;
-            QFileInfo asset(dir + "/" + name);
-            if (asset.exists()) {
-                return asset.absoluteFilePath();
-            }
-        }
-        return {};
-    }
-
     QString FindNekoBoxCoreRealPath() {
         auto fn = QApplication::applicationDirPath() + "/nekobox_core";
         auto fi = QFileInfo(fn);
@@ -404,10 +385,26 @@ namespace NekoGui {
         return qApp->applicationDirPath();
     }
 
+    QString GetCoreAssetDir(const QString &name) {
+        QStringList search = {
+            GetBasePath(),
+            QString("/usr/share/sing-geoip"),
+            QString("/usr/share/sing-geosite"),
+            QString("/usr/share/sing-box"),
+        };
+
+        for (const auto &dir: search) {
+            if (dir.isEmpty())
+                continue;
+
+            if (QFile(QString("%1/%2").arg(dir, name)).exists())
+                return dir;
+        }
+
+        return "";
+    }
+
     bool NeedGeoAssets(){
-        auto path = GetBasePath();
-        auto geoIP = QFile(path + "/geoip.db");
-        auto geoSite = QFile(path + "/geosite.db");
-        return !geoIP.exists() || !geoSite.exists();
+        return GetCoreAssetDir("geoip.db").isEmpty() || GetCoreAssetDir("geosite.db").isEmpty();
     }
 } // namespace NekoGui

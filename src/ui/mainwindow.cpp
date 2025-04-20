@@ -25,6 +25,10 @@
 #else
 #ifdef Q_OS_LINUX
 #include "include/sys/linux/LinuxCap.h"
+#include "include/sys/linux/desktopinfo.h"
+#include <QDBusInterface>
+#include <QDBusReply>
+#include <QUuid>
 #endif
 #include <unistd.h>
 #endif
@@ -143,7 +147,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
         DS_cores);
 
     if (!NekoGui::dataStore->font.isEmpty()) {
-        qApp->setFont(NekoGui::dataStore->font);
+        auto font = qApp->font();
+        font.setFamily(NekoGui::dataStore->font);
+        qApp->setFont(font);
     }
     if (NekoGui::dataStore->font_size != 0) {
         auto font = qApp->font();
@@ -401,7 +407,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     });
     connect(ui->menu_qr, &QAction::triggered, this, [=]() { display_qr_link(false); });
     connect(ui->system_dns, &QCheckBox::clicked, this, [=](bool checked) {
-        if (const auto ok = set_system_dns(checked); !ok) {
+        if (const auto ok = set_system_dns(checked, NekoGui::dataStore->dns_server_listen_addr); !ok) {
             ui->system_dns->setChecked(!checked);
         } else {
             refresh_status();
@@ -434,8 +440,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
             action->setChecked(NekoGui::dataStore->routing->current_route_id == route.first);
             connect(action, &QAction::triggered, this, [=]()
             {
-                if (NekoGui::dataStore->routing->current_route_id == route.first) return;
-                NekoGui::dataStore->routing->current_route_id = action->data().toInt();
+                auto routeID = action->data().toInt();
+                if (NekoGui::dataStore->routing->current_route_id == routeID) return;
+                NekoGui::dataStore->routing->current_route_id = routeID;
+                NekoGui::dataStore->routing->Save();
                 if (NekoGui::dataStore->started_id >= 0) neko_start(NekoGui::dataStore->started_id);
             });
             ui->menuRouting_Menu->addAction(action);
@@ -602,6 +610,15 @@ void MainWindow::dialog_message_impl(const QString &sender, const QString &info)
         }
         refresh_status();
     }
+    if (info.contains("DNSServerChanged"))
+    {
+        if (NekoGui::dataStore->system_dns_set)
+        {
+            auto oldAddr = info.split(",")[1];
+            set_system_dns(false, oldAddr);
+            set_system_dns(true, NekoGui::dataStore->dns_server_listen_addr);
+        }
+    }
     if (info.contains("NeedRestart")) {
         auto n = QMessageBox::warning(GetMessageBoxParent(), tr("Settings changed"), tr("Restart the program to take effect."), QMessageBox::Yes | QMessageBox::No);
         if (n == QMessageBox::Yes) {
@@ -665,7 +682,7 @@ void MainWindow::dialog_message_impl(const QString &sender, const QString &info)
                     neko_set_spmode_vpn(true, false);
                 }
                 if (NekoGui::dataStore->flag_dns_set) {
-                    set_system_dns(true);
+                    set_system_dns(true, NekoGui::dataStore->dns_server_listen_addr);
                 }
             }
             if (auto id = info.split(",")[1].toInt(); id >= 0)
@@ -673,7 +690,7 @@ void MainWindow::dialog_message_impl(const QString &sender, const QString &info)
                 neko_start(id);
             }
             if (NekoGui::dataStore->system_dns_set) {
-                set_system_dns(true);
+                set_system_dns(true, NekoGui::dataStore->dns_server_listen_addr);
                 ui->system_dns->setChecked(true);
             }
         }
@@ -716,7 +733,7 @@ void MainWindow::on_menu_hotkey_settings_triggered() {
 
 void MainWindow::on_commitDataRequest() {
     qDebug() << "Handling DNS setting";
-    if (NekoGui::dataStore->system_dns_set) set_system_dns(false, false);
+    if (NekoGui::dataStore->system_dns_set) set_system_dns(false, NekoGui::dataStore->dns_server_listen_addr, false);
     qDebug() << "Done handling DNS setting";
     qDebug() << "Start of data save";
     //
@@ -812,6 +829,11 @@ void MainWindow::neko_toggle_system_proxy() {
 }
 
 bool MainWindow::get_elevated_permissions(int reason) {
+    if (NekoGui::dataStore->disable_privilege_req)
+    {
+        MW_show_log(tr("User opted for no privilege req, some features may not work"));
+        return true;
+    }
     if (NekoGui::IsAdmin()) return true;
 #ifdef Q_OS_LINUX
     if (!Linux_HavePkexec()) {
@@ -1581,6 +1603,84 @@ void MainWindow::display_qr_link(bool nkrFormat) {
     w->deleteLater();
 }
 
+#ifdef Q_OS_LINUX
+OrgFreedesktopPortalRequestInterface::OrgFreedesktopPortalRequestInterface(
+  const QString& service,
+  const QString& path,
+  const QDBusConnection& connection,
+  QObject* parent)
+  : QDBusAbstractInterface(service,
+                           path,
+                           "org.freedesktop.portal.Request",
+                           connection,
+                           parent)
+{}
+
+OrgFreedesktopPortalRequestInterface::~OrgFreedesktopPortalRequestInterface() {}
+#endif
+
+QPixmap grabScreen(QScreen* screen, bool& ok)
+{
+    QPixmap p;
+    QRect geom = screen->geometry();
+#ifdef Q_OS_LINUX
+    DesktopInfo m_info;
+    if (m_info.waylandDetected()) {
+        QDBusInterface screenshotInterface(
+          QStringLiteral("org.freedesktop.portal.Desktop"),
+          QStringLiteral("/org/freedesktop/portal/desktop"),
+          QStringLiteral("org.freedesktop.portal.Screenshot"));
+
+        // unique token
+        QString token =
+          QUuid::createUuid().toString().remove('-').remove('{').remove('}');
+
+        // premake interface
+        auto* request = new OrgFreedesktopPortalRequestInterface(
+          QStringLiteral("org.freedesktop.portal.Desktop"),
+          "/org/freedesktop/portal/desktop/request/" +
+            QDBusConnection::sessionBus().baseService().remove(':').replace('.','_') +
+            "/" + token,
+          QDBusConnection::sessionBus());
+
+        QEventLoop loop;
+        const auto gotSignal = [&p, &loop](uint status, const QVariantMap& map) {
+            if (status == 0) {
+                // Parse this as URI to handle unicode properly
+                QUrl uri = map.value("uri").toString();
+                QString uriString = uri.toLocalFile();
+                p = QPixmap(uriString);
+                p.setDevicePixelRatio(qApp->devicePixelRatio());
+                QFile imgFile(uriString);
+                imgFile.remove();
+            }
+            loop.quit();
+        };
+
+        // prevent racy situations and listen before calling screenshot
+        QMetaObject::Connection conn = QObject::connect(
+          request, &org::freedesktop::portal::Request::Response, gotSignal);
+
+        screenshotInterface.call(
+          QStringLiteral("Screenshot"),
+          "",
+          QMap<QString, QVariant>({ { "handle_token", QVariant(token) },
+                                    { "interactive", QVariant(false) } }));
+
+        loop.exec();
+        QObject::disconnect(conn);
+        request->Close().waitForFinished();
+        request->deleteLater();
+
+        if (p.isNull()) {
+            ok = false;
+        }
+	return p;
+    } else
+#endif
+        return screen->grabWindow(0, geom.x(), geom.y(), geom.width(), geom.height());
+}
+
 void MainWindow::on_menu_scan_qr_triggered() {
 #ifndef NKR_NO_ZXING
     using namespace ZXingQt;
@@ -1588,24 +1688,27 @@ void MainWindow::on_menu_scan_qr_triggered() {
     hide();
     QThread::sleep(1);
 
-    auto screen = QGuiApplication::primaryScreen();
-    auto geom = screen->geometry();
-    auto qpx = screen->grabWindow(0, geom.x(), geom.y(), geom.width(), geom.height());
+    bool ok = true;
+    QPixmap qpx(grabScreen(QGuiApplication::primaryScreen(), ok));
 
     show();
+    if (ok) {
+        auto hints = DecodeHints()
+                        .setFormats(BarcodeFormat::QRCode)
+                        .setTryRotate(false)
+                        .setBinarizer(Binarizer::FixedThreshold);
 
-    auto hints = DecodeHints()
-                     .setFormats(BarcodeFormat::QRCode)
-                     .setTryRotate(false)
-                     .setBinarizer(Binarizer::FixedThreshold);
-
-    auto result = ReadBarcode(qpx.toImage(), hints);
-    const auto &text = result.text();
-    if (text.isEmpty()) {
-        MessageBoxInfo(software_name, tr("QR Code not found"));
-    } else {
-        show_log_impl("QR Code Result:\n" + text);
-        NekoGui_sub::groupUpdater->AsyncUpdate(text);
+        auto result = ReadBarcode(qpx.toImage(), hints);
+        const auto &text = result.text();
+        if (text.isEmpty()) {
+            MessageBoxInfo(software_name, tr("QR Code not found"));
+        } else {
+            show_log_impl("QR Code Result:\n" + text);
+            NekoGui_sub::groupUpdater->AsyncUpdate(text);
+        }
+    }
+    else {
+        MessageBoxInfo(software_name, tr("Unable to capture screen"));
     }
 #endif
 }
@@ -2094,14 +2197,14 @@ void MainWindow::DownloadAssets(const QString &geoipUrl, const QString &geositeU
     MW_show_log("Start downloading...");
     QString errors;
     if (!geoipUrl.isEmpty()) {
-        auto resp = NetworkRequestHelper::DownloadAsset(geoipUrl, "geoip.db", true);
+        auto resp = NetworkRequestHelper::DownloadAsset(geoipUrl, "geoip.db");
         if (!resp.isEmpty()) {
             MW_show_log(QString(tr("Failed to download geoip: %1")).arg(resp));
             errors += "geoip: " + resp;
         }
     }
     if (!geositeUrl.isEmpty()) {
-        auto resp = NetworkRequestHelper::DownloadAsset(geositeUrl, "geosite.db", true);
+        auto resp = NetworkRequestHelper::DownloadAsset(geositeUrl, "geosite.db");
         if (!resp.isEmpty()) {
             MW_show_log(QString(tr("Failed to download geosite: %1")).arg(resp));
             errors += "\ngeosite: " + resp;
@@ -2201,7 +2304,7 @@ void MainWindow::CheckUpdate() {
         });
         return;
     }
-    
+
     QString assets_name, release_download_url, release_url, release_note, note_pre_release;
     bool exitFlag = false;
     QJsonArray array = QString2QJsonArray(resp.data);
@@ -2252,7 +2355,7 @@ void MainWindow::CheckUpdate() {
                 }
                 QString errors;
                 if (!release_download_url.isEmpty()) {
-                    auto res = NetworkRequestHelper::DownloadAsset(release_download_url, "nekoray.zip", false);
+                    auto res = NetworkRequestHelper::DownloadAsset(release_download_url, "nekoray.zip");
                     if (!res.isEmpty()) {
                         errors += res;
                     }

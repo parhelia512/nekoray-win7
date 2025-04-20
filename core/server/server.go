@@ -186,13 +186,23 @@ func (s *server) QueryStats(ctx context.Context, _ *gen.EmptyReq) (*gen.QuerySta
 			}
 			outbounds := service.FromContext[adapter.OutboundManager](boxInstance.Context())
 			if outbounds == nil {
-				log.Println("Failed to assert outbound manager")
-				return nil, E.New("invalid outbound manager type")
+				log.Println("Failed to get outbound manager")
+				return nil, E.New("nil outbound manager")
+			}
+			endpoints := service.FromContext[adapter.EndpointManager](boxInstance.Context())
+			if endpoints == nil {
+				log.Println("Failed to get endpoint manager")
+				return nil, E.New("nil endpoint manager")
 			}
 			for _, out := range outbounds.Outbounds() {
 				u, d := cApi.TrafficManager().TotalOutbound(out.Tag())
 				resp.Ups[out.Tag()] = u
 				resp.Downs[out.Tag()] = d
+			}
+			for _, ep := range endpoints.Endpoints() {
+				u, d := cApi.TrafficManager().TotalOutbound(ep.Tag())
+				resp.Ups[ep.Tag()] = u
+				resp.Downs[ep.Tag()] = d
 			}
 		}
 	}
@@ -283,29 +293,6 @@ func (s *server) CompileGeoIPToSrs(ctx context.Context, in *gen.CompileGeoIPToSr
 func (s *server) CompileGeoSiteToSrs(ctx context.Context, in *gen.CompileGeoSiteToSrsRequest) (*gen.EmptyResp, error) {
 	category := strings.TrimSuffix(in.Item, "_SITE")
 	err := boxmain.CompileRuleSet(in.Path+string(os.PathSeparator)+"geosite.db", category, boxmain.SiteRuleSet, "./rule_sets/"+in.Item+".srs")
-	if err != nil {
-		return nil, err
-	}
-
-	return &gen.EmptyResp{}, nil
-}
-
-func (s *server) SetSystemProxy(ctx context.Context, in *gen.SetSystemProxyRequest) (*gen.EmptyResp, error) {
-	var err error
-	addr := metadata.ParseSocksaddr(in.Address)
-	if systemProxyController == nil || systemProxyAddr.String() != addr.String() {
-		systemProxyController, err = settings.NewSystemProxy(context.Background(), addr, true)
-		if err != nil {
-			return nil, err
-		}
-		systemProxyAddr = addr
-	}
-	if in.Enable && !systemProxyController.IsEnabled() {
-		err = systemProxyController.Enable()
-	}
-	if !in.Enable && systemProxyController.IsEnabled() {
-		err = systemProxyController.Disable()
-	}
 	if err != nil {
 		return nil, err
 	}

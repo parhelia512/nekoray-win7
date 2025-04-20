@@ -1,7 +1,5 @@
 #pragma once
 
-#ifndef NKR_NO_GRPC
-
 #include "core/server/gen/libcore.pb.h"
 #include <QString>
 
@@ -34,11 +32,9 @@ namespace NekoGui_rpc {
 
         QString CompileGeoSet(bool *rpcOK, GeoRuleSetType mode, std::string category, const QString& basePath);
 
-        QString SetSystemProxy(bool *rpcOK, bool enable);
+        bool GetDNSDHCPStatus(bool *rpcOK) const;
 
-        libcore::GetSystemDNSResponse GetSystemDNS(bool *rpcOK) const;
-
-        QString SetSystemDNS(bool *rpcOK, const QStringList& servers, bool dhcp, bool clear) const;
+        QString SetSystemDNS(bool *rpcOK, const QString& customNS, bool dhcp, bool clear) const;
 
         libcore::ListConnectionsResp ListConnections(bool *rpcOK) const;
 
@@ -54,4 +50,3 @@ namespace NekoGui_rpc {
 
     inline Client *defaultClient;
 } // namespace NekoGui_rpc
-#endif

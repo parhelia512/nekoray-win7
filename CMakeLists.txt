@@ -11,7 +11,7 @@ if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND WIN32)
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 endif ()
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets Network LinguistTools Charts)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Network LinguistTools Charts DBus)
 
 if (NKR_CROSS)
     set_property(TARGET Qt6::moc PROPERTY IMPORTED_LOCATION /usr/bin/moc)
@@ -37,7 +37,6 @@ list(APPEND CMAKE_PREFIX_PATH ${NKR_LIBS})
 if(WIN32)
     list(APPEND CMAKE_PREFIX_PATH "libs/deps/built/x64-windows-static")
 endif ()
-add_definitions(-DCURL_STATICLIB)
 
 message("[CMAKE_PREFIX_PATH] ${CMAKE_PREFIX_PATH}")
 
@@ -65,9 +64,6 @@ list(APPEND NKR_EXTERNAL_TARGETS yaml-cpp)
 
 find_package(ZXing CONFIG REQUIRED)
 list(APPEND NKR_EXTERNAL_TARGETS ZXing::ZXing)
-
-find_package(cpr REQUIRED)
-list(APPEND NKR_EXTERNAL_TARGETS cpr::cpr)
 
 set(BUILD_SHARED_LIBS OFF)
 list(APPEND NKR_EXTERNAL_TARGETS qhotkey)
@@ -262,7 +258,7 @@ target_sources(nekoray PRIVATE ${CMAKE_BINARY_DIR}/translations.qrc)
 # Target Link
 
 target_link_libraries(nekoray PRIVATE
-        Qt6::Widgets Qt6::Network Qt6::Charts
+        Qt6::Widgets Qt6::Network Qt6::Charts Qt6::DBus
         Threads::Threads
         ${NKR_EXTERNAL_TARGETS}
         ${PLATFORM_LIBRARIES}

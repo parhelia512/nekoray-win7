@@ -48,14 +48,6 @@
         <translation>Задать иконку</translation>
     </message>
     <message>
-        <source>Statistics refresh rate</source>
-        <translation>Частота обновления статистики</translation>
-    </message>
-    <message>
-        <source>Off</source>
-        <translation>Выкл</translation>
-    </message>
-    <message>
         <source>Connection statistics</source>
         <translation>Статистика подключений</translation>
     </message>
@@ -201,7 +193,7 @@ For NekoBox, this rewrites the underlying(localhost) DNS in Tun Mode, normal mod
     </message>
     <message>
         <source>Geo Assets and Rule-sets</source>
-        <translation type="unfinished">Гео ресурсы и наборы правил</translation>
+        <translation type="unfinished">Георесурсы и наборы правил</translation>
     </message>
     <message>
         <source>Remove Generated Rule-sets</source>
@@ -217,7 +209,7 @@ For NekoBox, this rewrites the underlying(localhost) DNS in Tun Mode, normal mod
     </message>
     <message>
         <source>Download and Replace Geo files</source>
-        <translation type="unfinished">Загрузка и замена Геофайлов</translation>
+        <translation type="unfinished">Загрузить и заменить геофайлы</translation>
     </message>
     <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Socks
@@ -619,7 +611,7 @@ For NekoBox, this rewrites the underlying(localhost) DNS in Tun Mode, normal mod
     </message>
     <message>
         <source>Sniffing Mode</source>
-        <translation>Режим проверки (Сниффера)</translation>
+        <translation>Режим проверки (Сниффер)</translation>
     </message>
     <message>
         <source>DNS</source>
@@ -885,22 +877,6 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
         <translation>Редактор JSON</translation>
     </message>
     <message>
-        <source>Command</source>
-        <translation>Команда</translation>
-    </message>
-    <message>
-        <source>Config Suffix</source>
-        <translation>Суффикс конфига</translation>
-    </message>
-    <message>
-        <source>Random if it&apos;s empty or zero.</source>
-        <translation>Если пусто или ноль, то будет выбран случайным образом.</translation>
-    </message>
-    <message>
-        <source>Preview</source>
-        <translation>Предпросмотр</translation>
-    </message>
-    <message>
         <source>Outbound JSON, please read the documentation.</source>
         <translation>Outbound JSON, прочтите документацию.</translation>
     </message>
@@ -909,16 +885,8 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
         <translation>Пожалуйста, введите полную конфигурацию.</translation>
     </message>
     <message>
-        <source>Preview replace</source>
-        <translation>Предпросмотр замен</translation>
-    </message>
-    <message>
         <source>Name cannot be empty.</source>
         <translation>Имя не может быть пустым.</translation>
-    </message>
-    <message>
-        <source>Please pick a core.</source>
-        <translation>Пожалуйста, выберите ядро.</translation>
     </message>
 </context>
 <context>
@@ -945,7 +913,7 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
     </message>
     <message>
         <source>Upload (Mbps)</source>
-        <translation>Скорость отдачи (Mbps)</translation>
+        <translation>Скорость выгрузки (Мбит/с)</translation>
     </message>
     <message>
         <source>Obfs Password</source>
@@ -1123,7 +1091,7 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
     </message>
     <message>
         <source>Reserved</source>
-        <translation type="unfinished">Зарезервировано</translation>
+        <translation type="unfinished">Резервный (Reserved)</translation>
     </message>
     <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;comma seperated list of subnets&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
@@ -1131,11 +1099,11 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
     </message>
     <message>
         <source>Local Address</source>
-        <translation type="unfinished">Локальный адресс</translation>
+        <translation type="unfinished">Локальный адресс (Local Address)</translation>
     </message>
     <message>
         <source>Pre Shared Key</source>
-        <translation type="unfinished">Пре. общий ключ</translation>
+        <translation type="unfinished">Пре. общий ключ (Pre Shared Key)</translation>
     </message>
     <message>
         <source>Use System Interface</source>
@@ -1147,11 +1115,11 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
     </message>
     <message>
         <source>Public Key</source>
-        <translation type="unfinished">Публичный ключ</translation>
+        <translation type="unfinished">Публичный ключ (Public Key)</translation>
     </message>
     <message>
         <source>Private Key</source>
-        <translation type="unfinished">Приватный ключ</translation>
+        <translation type="unfinished">Приватный ключ (Private Key)</translation>
     </message>
     <message>
         <source>1420</source>
@@ -1163,7 +1131,7 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
     </message>
     <message>
         <source>Workers</source>
-        <translation type="unfinished">Рабочие</translation>
+        <translation type="unfinished">Рабочий</translation>
     </message>
 </context>
 <context>
@@ -1861,6 +1829,14 @@ Split by line.</source>
         <source>Geo Asset update completed!</source>
         <translation type="unfinished">Обновление георесурсов завершено!</translation>
     </message>
+    <message>
+        <source>Traffic Graph</source>
+        <translation type="unfinished">График трафика</translation>
+    </message>
+    <message>
+        <source>Failed to download update assets</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ProxyItem</name>
@@ -2000,6 +1976,38 @@ Release note:
         <source>Create new subscription group</source>
         <translation type="unfinished">Создать новую группу подписки</translation>
     </message>
+    <message>
+        <source>Could not open file.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not official support platform</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Requesting update error: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Traffic Chart</source>
+        <translation type="unfinished">График трафика</translation>
+    </message>
+    <message>
+        <source>Proxy Dl</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Proxy Ul</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Direct Dl</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Direct Ul</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>QPlatformTheme</name>
@@ -2009,15 +2017,15 @@ Release note:
     </message>
     <message>
         <source>Apply</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">Применить</translation>
     </message>
     <message>
         <source>Yes</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">Да</translation>
     </message>
     <message>
         <source>No</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">Нет</translation>
     </message>
     <message>
         <source>OK</source>

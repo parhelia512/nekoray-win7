@@ -49,12 +49,14 @@ DialogBasicSettings::DialogBasicSettings(QWidget *parent)
     D_LOAD_INT(max_log_line)
     //
     ui->language->setCurrentIndex(NekoGui::dataStore->language);
-    connect(ui->language, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, [=](int index) {
+    connect(ui->language, &QComboBox::currentIndexChanged, this, [=](int index) {
         CACHE.needRestart = true;
     });
-    connect(ui->font, &QComboBox::currentTextChanged, this, [=](const QString &font) {
+    connect(ui->font, &QComboBox::currentTextChanged, this, [=](const QString &fontName) {
+        auto font = qApp->font();
+        font.setFamily(fontName);
         qApp->setFont(font);
-        NekoGui::dataStore->font = font;
+        NekoGui::dataStore->font = fontName;
         NekoGui::dataStore->Save();
         adjustSize();
     });
@@ -145,6 +147,7 @@ DialogBasicSettings::DialogBasicSettings(QWidget *parent)
     // Security
 
     ui->utlsFingerprint->addItems(Preset::SingBox::UtlsFingerPrint);
+    ui->disable_priv_req->setChecked(NekoGui::dataStore->disable_privilege_req);
 
     D_LOAD_BOOL(skip_cert)
     ui->utlsFingerprint->setCurrentText(NekoGui::dataStore->utlsFingerprint);
@@ -213,6 +216,7 @@ void DialogBasicSettings::accept() {
 
     D_SAVE_BOOL(skip_cert)
     NekoGui::dataStore->utlsFingerprint = ui->utlsFingerprint->currentText();
+    NekoGui::dataStore->disable_privilege_req = ui->disable_priv_req->isChecked();
 
     QStringList str{"UpdateDataStore"};
     if (CACHE.needRestart) str << "NeedRestart";

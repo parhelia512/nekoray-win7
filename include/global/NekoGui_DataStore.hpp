@@ -39,7 +39,7 @@ namespace NekoGui {
         bool need_keep_vpn_off = false;
         QString appdataDir = "";
         QStringList ignoreConnTag = {};
-        QString proxy_scheme = "http";
+        QString proxy_scheme = "{ip}:{port}";
 
         std::unique_ptr<Routing> routing;
         int imported_count = 0;
@@ -113,7 +113,6 @@ namespace NekoGui {
 
         // VPN
         bool fake_dns = false;
-        bool auto_redirect = false;
 #ifdef Q_OS_MACOS
         QString vpn_implementation = "gvisor";
 #else
@@ -122,6 +121,7 @@ namespace NekoGui {
         int vpn_mtu = 1500;
         bool vpn_ipv6 = false;
         bool vpn_strict_route = true;
+        bool disable_privilege_req = false;
 
         // NTP
         bool enable_ntp = false;
@@ -143,7 +143,6 @@ namespace NekoGui {
         // System dns
         bool system_dns_set = false;
         bool is_dhcp = false;
-        QStringList system_dns_servers = {};
 
         // Hotkey
         QString hotkey_mainwindow = "";

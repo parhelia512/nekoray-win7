@@ -18,11 +18,9 @@
 #ifdef Q_OS_WIN
 #include "include/sys/windows/MiniDump.h"
 #include "include/sys/windows/eventHandler.h"
-#pragma comment (lib, "cpr.lib")
-#pragma comment (lib, "libcurl.lib")
-#pragma comment (lib, "Ws2_32.lib")
-#pragma comment (lib, "Wldap32.lib")
-#pragma comment (lib, "Crypt32.lib")
+#endif
+#ifdef Q_OS_LINUX
+#include "include/sys/linux/desktopinfo.h"
 #endif
 
 void signal_handler(int signum) {
