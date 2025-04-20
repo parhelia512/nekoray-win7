@@ -17,7 +17,6 @@
 
 #ifdef Q_OS_WIN
 #include "include/sys/windows/MiniDump.h"
-#include "include/sys/windows/vcCheck.h"
 #include "include/sys/windows/eventHandler.h"
 #endif
 #ifdef Q_OS_LINUX
@@ -67,14 +66,6 @@ int main(int argc, char* argv[]) {
     QApplication::setAttribute(Qt::AA_DontUseNativeDialogs);
     QApplication::setQuitOnLastWindowClosed(false);
     QApplication a(argc, argv);
-
-#ifdef Q_OS_WIN
-    if (!checkVCRedist())
-    {
-        QMessageBox::critical(nullptr, "Cannot run Nekoray", "You need to install VC 2022 Redistributable.<br>Download it from <a href='https://aka.ms/vs/17/release/vc_redist.x64.exe'>here</a>.");
-        return 1;
-    }
-#endif
 
     // Clean
     QDir::setCurrent(QApplication::applicationDirPath());
