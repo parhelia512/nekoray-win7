@@ -184,7 +184,7 @@ inline void connectOnce(EMITTER *emitter, SIGNAL signal, RECEIVER *receiver, Rec
 
 void setTimeout(const std::function<void()> &callback, QObject *obj, int timeout = 0);
 
-inline isDarkMode() {
+inline bool isDarkMode() {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
     return qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark;
 #endif
