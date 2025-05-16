@@ -33,6 +33,7 @@ DialogBasicSettings::DialogBasicSettings(QWidget *parent)
     D_LOAD_INT(inbound_socks_port)
     D_LOAD_INT(test_concurrent)
     D_LOAD_STRING(test_latency_url)
+    ui->speedtest_mode->setCurrentIndex(NekoGui::dataStore->speed_test_mode);
 
     connect(ui->custom_inbound_edit, &QPushButton::clicked, this, [=] {
         C_EDIT_JSON_ALLOW_EMPTY(custom_inbound)
@@ -138,7 +139,7 @@ DialogBasicSettings::DialogBasicSettings(QWidget *parent)
     ui->ntp_server->setText(NekoGui::dataStore->ntp_server_address);
     ui->ntp_port->setText(Int2String(NekoGui::dataStore->ntp_server_port));
     ui->ntp_interval->setCurrentText(NekoGui::dataStore->ntp_interval);
-    connect(ui->ntp_enable, &QCheckBox::checkStateChanged, this, [=](const bool &state) {
+    connect(ui->ntp_enable, &QCheckBox::stateChanged, this, [=](const bool &state) {
         ui->ntp_server->setEnabled(state);
         ui->ntp_port->setEnabled(state);
         ui->ntp_interval->setEnabled(state);
@@ -167,6 +168,7 @@ void DialogBasicSettings::accept() {
     D_SAVE_INT(test_concurrent)
     D_SAVE_STRING(test_latency_url)
     NekoGui::dataStore->proxy_scheme = ui->proxy_scheme->currentText().toLower();
+    NekoGui::dataStore->speed_test_mode = ui->speedtest_mode->currentIndex();
 
     // Style
 
@@ -278,8 +280,7 @@ void DialogBasicSettings::on_core_settings_clicked() {
     auto core_box_underlying_dns_l = new QLabel(tr("Override underlying DNS"));
     core_box_underlying_dns_l->setToolTip(tr(
         "It is recommended to leave it blank, but it sometimes does not work, at this time you can set this option.\n"
-        "For NekoRay, this rewrites the underlying(localhost) DNS in Tun Mode.\n"
-        "For NekoBox, this rewrites the underlying(localhost) DNS in Tun Mode, normal mode, and also URL Test."));
+        "For nekobox_core, this rewrites the underlying(localhost) DNS in Tun Mode, normal mode, and also URL Test."));
     core_box_underlying_dns = new MyLineEdit;
     core_box_underlying_dns->setText(NekoGui::dataStore->core_box_underlying_dns);
     core_box_underlying_dns->setMinimumWidth(300);

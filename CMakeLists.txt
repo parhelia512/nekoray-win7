@@ -34,9 +34,6 @@ endif ()
 
 list(APPEND NKR_LIBS ${CMAKE_SOURCE_DIR}/libs/deps/built)
 list(APPEND CMAKE_PREFIX_PATH ${NKR_LIBS})
-if(WIN32)
-    list(APPEND CMAKE_PREFIX_PATH "libs/deps/built/x64-windows-static")
-endif ()
 
 message("[CMAKE_PREFIX_PATH] ${CMAKE_PREFIX_PATH}")
 
@@ -150,6 +147,10 @@ set(PROJECT_SOURCES
         include/ui/profile/edit_custom.h
         src/ui/profile/edit_custom.cpp
         include/ui/profile/edit_custom.ui
+
+        include/ui/profile/edit_extra_core.h
+        src/ui/profile/edit_extra_core.cpp
+        include/ui/profile/edit_extra_core.ui
 
         include/ui/profile/edit_wireguard.h
         src/ui/profile/edit_wireguard.cpp

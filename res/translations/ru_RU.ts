@@ -137,11 +137,9 @@
     </message>
     <message>
         <source>It is recommended to leave it blank, but it sometimes does not work, at this time you can set this option.
-For NekoRay, this rewrites the underlying(localhost) DNS in Tun Mode.
-For NekoBox, this rewrites the underlying(localhost) DNS in Tun Mode, normal mode, and also URL Test.</source>
+For nekobox_core, this rewrites the underlying(localhost) DNS in Tun Mode, normal mode, and also URL Test.</source>
         <translation>Рекомендуется оставить параметр пустым, но иногда это не срабатывает как надо, и в таком случае можно использовать эту опцию.
-Для  NekoRay  это переопределяет нижестоящий (localhost) DNS в  Tun режиме.
-Для  NekoBox  это переопределяет нижестоящий (localhost) DNS в  Tun режиме, нормальном режиме, а также при URL тесте.</translation>
+Для  nekobox_core  это переопределяет нижестоящий (localhost) DNS в  Tun режиме, нормальном режиме, а также при URL тесте.</translation>
     </message>
     <message>
         <source>Automatic update</source>
@@ -1835,7 +1833,7 @@ Split by line.</source>
     </message>
     <message>
         <source>Failed to download update assets</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">Не удалось загрузить обновления ресурсов</translation>
     </message>
 </context>
 <context>
@@ -1978,15 +1976,15 @@ Release note:
     </message>
     <message>
         <source>Could not open file.</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">Не удалось открыть файл.</translation>
     </message>
     <message>
         <source>Not official support platform</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">Не официальная платформа поддержки</translation>
     </message>
     <message>
         <source>Requesting update error: %1</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">Ошибка запроса обновления: %1</translation>
     </message>
     <message>
         <source>Traffic Chart</source>
@@ -1994,19 +1992,19 @@ Release note:
     </message>
     <message>
         <source>Proxy Dl</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">Прокси Dl</translation>
     </message>
     <message>
         <source>Proxy Ul</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">Прокси Ul</translation>
     </message>
     <message>
         <source>Direct Dl</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">Напрямую Dl</translation>
     </message>
     <message>
         <source>Direct Ul</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">Напрямую Ul</translation>
     </message>
 </context>
 <context>
