@@ -256,15 +256,55 @@ For nekobox_core, this rewrites the underlying(localhost) DNS in Tun Mode, norma
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>http</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>socks</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Removed all rule-set files</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>{ip}:{port}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>http://{ip}:{port}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>socks={ip}:{port}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Speedtest mode</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Download + Upload</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Only Download</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Only Upload</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Disable Privilege request</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Simple Download</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Simple Download URL</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Do not attempt to start as Admin unless explicitly requested&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Always Start as Standard User</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -525,6 +565,10 @@ For nekobox_core, this rewrites the underlying(localhost) DNS in Tun Mode, norma
         <source>header type</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Extra Core</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>DialogHotkey</name>
@@ -599,10 +643,6 @@ For nekobox_core, this rewrites the underlying(localhost) DNS in Tun Mode, norma
         <translation type="unfinished">دی ان اس مستقیم</translation>
     </message>
     <message>
-        <source>Default Outbound</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Sniff result for routing</source>
         <translation type="unfinished"></translation>
     </message>
@@ -654,10 +694,6 @@ For more information, see the document &quot;Configuration/DNS&quot;.</source>
     </message>
     <message>
         <source>Routing Profile</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>The outbound tag to use when the request is not handled by any rule</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -787,11 +823,11 @@ also if the connection cannot be established with the current address family (ip
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Profile is Read-only</source>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Whether to listen on 0.0.0.0 so that other devices on LAN can use this server&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Cannot delete built-in profiles</source>
+        <source>Allow Lan to Connect</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -825,11 +861,15 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</source>
         <translation type="unfinished">لغو کردن</translation>
     </message>
     <message>
-        <source>Auto Redirect</source>
+        <source>Strict Route</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Strict Route</source>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When enabled, Direct IP CIDRs and rule sets will also be added to the Tun setting to be excluded at OS routing level. IMPORTANT: Large rule sets have been reported to cause massive CPU usage in windows, please enable this option with caution.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enable Tun Routing</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -869,6 +909,61 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</source>
     <message>
         <source>Name cannot be empty.</source>
         <translation type="unfinished">نام نمیتواند خالی باشد</translation>
+    </message>
+</context>
+<context>
+    <name>EditExtraCore</name>
+    <message>
+        <source>Form</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Socks address</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>127.0.0.1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Socks port</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>1080</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Core path</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choose from file</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;args to pass to the executable. You can insert a single %s and it will be replaced with the path to a file containing the config entered below.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Args</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>run -confPath %s</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;contents of the config file that will be passed to the extra core process if %s is specified in the args&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Config</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No logs</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1113,6 +1208,18 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</source>
     </message>
     <message>
         <source>Workers</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;persistent_keepalive_interval in seconds&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Persistent Keepalive</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1453,27 +1560,6 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</source>
         <translation>کد QR یافت نشد</translation>
     </message>
     <message>
-        <source>Set ignore keyword</source>
-        <translation>کلیدواژه نادیده گرفتن را تنظیم کنید</translation>
-    </message>
-    <message>
-        <source>Set the following keywords to ignore?
-Split by line.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Save as route</source>
-        <translation>ذخیره به عنوان مسیر</translation>
-    </message>
-    <message>
-        <source>Edit</source>
-        <translation>ویرایش کردن</translation>
-    </message>
-    <message>
-        <source>Save &quot;%1&quot; as a routing rule?</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Clear</source>
         <translation>پاک کردن</translation>
     </message>
@@ -1638,28 +1724,8 @@ Split by line.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Network</source>
-        <translation type="unfinished">شبکه</translation>
-    </message>
-    <message>
         <source>Protocol</source>
         <translation type="unfinished">پروتکل</translation>
-    </message>
-    <message>
-        <source>Download</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Click To Sort By Download</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Upload</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Click To Sort By Upload</source>
-        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Logs</source>
@@ -1750,10 +1816,6 @@ Split by line.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Failed to get system dns settings</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Failed to set system dns: </source>
         <translation type="unfinished"></translation>
     </message>
@@ -1815,6 +1877,50 @@ Split by line.</source>
     </message>
     <message>
         <source>Failed to download update assets</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Speedtest Current</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Speedtest Selected</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Speedtest Group</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The last url test did not exit completely, please wait. If it persists, please restart the program.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>URL test finished!</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Profile speed test aborted</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>[%1] speed test error: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>User opted for no privilege req, some features may not work</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unable to capture screen</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Outbound</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Click To Toggle sort by Traffic</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1918,10 +2024,6 @@ Direct: %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Unavailable</source>
-        <translation>غیرقابل دسترس</translation>
-    </message>
-    <message>
         <source>Request with proxy but no profile started.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1962,23 +2064,7 @@ Direct: %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Traffic Chart</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Proxy Dl</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Proxy Ul</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Direct Dl</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Direct Ul</source>
+        <source>Tun mode cannot be used with Custom configs</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -2123,6 +2209,14 @@ Direct: %2</source>
     <message>
         <source>Some rules could not be added, fix them before saving:
 </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>proxy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>direct</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

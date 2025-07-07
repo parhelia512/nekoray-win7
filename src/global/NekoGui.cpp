@@ -277,7 +277,6 @@ namespace NekoGui {
         _add(new configItem("sub_clear", &sub_clear, itemType::boolean));
         _add(new configItem("sub_insecure", &sub_insecure, itemType::boolean));
         _add(new configItem("sub_auto_update", &sub_auto_update, itemType::integer));
-        _add(new configItem("log_ignore", &log_ignore, itemType::stringList));
         _add(new configItem("start_minimal", &start_minimal, itemType::boolean));
         _add(new configItem("max_log_line", &max_log_line, itemType::integer));
         _add(new configItem("splitter_state", &splitter_state, itemType::string));
@@ -303,6 +302,7 @@ namespace NekoGui {
         _add(new configItem("redirect_listen_port", &redirect_listen_port, itemType::integer));
         _add(new configItem("system_dns_set", &system_dns_set, itemType::boolean));
         _add(new configItem("windows_set_admin", &windows_set_admin, itemType::boolean));
+        _add(new configItem("disable_win_admin", &disable_run_admin, itemType::boolean));
         _add(new configItem("enable_stats", &enable_stats, itemType::boolean));
         _add(new configItem("stats_tab", &stats_tab, itemType::string));
         _add(new configItem("proxy_scheme", &proxy_scheme, itemType::string));
@@ -334,7 +334,6 @@ namespace NekoGui {
         if (!Preset::SingBox::DomainStrategy.contains(domain_strategy)) domain_strategy = "";
         if (!Preset::SingBox::DomainStrategy.contains(outbound_domain_strategy)) outbound_domain_strategy = "";
         _add(new configItem("current_route_id", &this->current_route_id, itemType::integer));
-        _add(new configItem("default_outbound", &this->def_outbound, itemType::string));
         //
         _add(new configItem("remote_dns", &this->remote_dns, itemType::string));
         _add(new configItem("remote_dns_strategy", &this->remote_dns_strategy, itemType::string));

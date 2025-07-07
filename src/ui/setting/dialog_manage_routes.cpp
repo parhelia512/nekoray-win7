@@ -76,7 +76,6 @@ DialogManageRoutes::DialogManageRoutes(QWidget *parent) : QDialog(parent), ui(ne
     QStringList qsValue = {""};
     QString dnsHelpDocumentUrl;
 
-    ui->default_out->setCurrentText(NekoGui::dataStore->routing->def_outbound);
     ui->outbound_domain_strategy->addItems(Preset::SingBox::DomainStrategy);
     ui->domainStrategyCombo->addItems(Preset::SingBox::DomainStrategy);
     qsValue += QString("prefer_ipv4 prefer_ipv6 ipv4_only ipv6_only").split(" ");
@@ -87,12 +86,12 @@ DialogManageRoutes::DialogManageRoutes(QWidget *parent) : QDialog(parent), ui(ne
     ui->remote_dns_strategy->addItems(qsValue);
     ui->enable_fakeip->setChecked(NekoGui::dataStore->fake_dns);
     //
-    connect(ui->use_dns_object, &QCheckBox::stateChanged, this, [=](int state) {
+    connect(ui->use_dns_object, &QCheckBox::checkStateChanged, this, [=](int state) {
         auto useDNSObject = state == Qt::Checked;
         ui->simple_dns_box->setDisabled(useDNSObject);
         ui->dns_object->setDisabled(!useDNSObject);
     });
-    ui->use_dns_object->stateChanged(Qt::Unchecked); // uncheck to uncheck
+    ui->use_dns_object->checkStateChanged(Qt::Unchecked); // uncheck to uncheck
     connect(ui->dns_document, &QPushButton::clicked, this, [=] {
         MessageBoxInfo("DNS", dnsHelpDocumentUrl);
     });
@@ -166,10 +165,10 @@ DialogManageRoutes::DialogManageRoutes(QWidget *parent) : QDialog(parent), ui(ne
     ui->redirect_listenport->setValidator(QRegExpValidator_Number);
     ui->redirect_listenport->setText(Int2String(NekoGui::dataStore->redirect_listen_port));
 
-    connect(ui->dnshijack_enable, &QCheckBox::stateChanged, this, [=](bool state) {
+    connect(ui->dnshijack_enable, &QCheckBox::checkStateChanged, this, [=](bool state) {
         set_dns_hijack_enability(state);
     });
-    connect(ui->redirect_enable, &QCheckBox::stateChanged, this, [=](bool state) {
+    connect(ui->redirect_enable, &QCheckBox::checkStateChanged, this, [=](bool state) {
         ui->redirect_listenaddr->setEnabled(state);
         ui->redirect_listenport->setEnabled(state);
     });
@@ -209,7 +208,6 @@ void DialogManageRoutes::accept() {
 
     NekoGui::profileManager->UpdateRouteChains(chainList);
     NekoGui::dataStore->routing->current_route_id = currentRoute->id;
-    NekoGui::dataStore->routing->def_outbound = ui->default_out->currentText();
 
     NekoGui::dataStore->enable_dns_server = ui->dnshijack_enable->isChecked();
     NekoGui::dataStore->dns_server_listen_port = ui->dnshijack_listenport->text().toInt();
@@ -304,10 +302,6 @@ void DialogManageRoutes::on_delete_route_clicked() {
     }
 
     auto profileToDel = chainList[idx];
-    if (profileToDel->isViewOnly()) {
-        MessageBoxInfo(tr("Profile is Read-only"), tr("Cannot delete built-in profiles"));
-        return;
-    }
     chainList.removeAt(idx);
     if (profileToDel == currentRoute) {
         currentRoute = chainList[0];

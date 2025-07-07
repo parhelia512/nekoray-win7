@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/google/shlex"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/settings"
 	"github.com/sagernet/sing-box/experimental/clashapi"
@@ -36,6 +37,14 @@ type server struct {
 
 func (s *server) Exit(ctx context.Context, in *gen.EmptyReq) (out *gen.EmptyResp, _ error) {
 	out = &gen.EmptyResp{}
+
+	if needUnsetDNS {
+		needUnsetDNS = false
+		err := sys.SetSystemDNS("Empty", boxInstance.Network().InterfaceMonitor())
+		if err != nil {
+			log.Println("Failed to unset system DNS:", err)
+		}
+	}
 
 	// Connection closed
 	defer os.Exit(0)
@@ -75,7 +84,17 @@ func (s *server) Start(ctx context.Context, in *gen.LoadConfigReq) (out *gen.Err
 			return
 		}
 		_ = f.Close()
-		args := fmt.Sprintf(in.ExtraProcessArgs, extraConfPath)
+		args, e := shlex.Split(in.ExtraProcessArgs)
+		if e != nil {
+			err = E.Cause(e, "Failed to parse args")
+			return
+		}
+		for idx, arg := range args {
+			if strings.Contains(arg, "%s") {
+				args[idx] = fmt.Sprintf(arg, extraConfPath)
+				break
+			}
+		}
 
 		extraProcess = process.NewProcess(in.ExtraProcessPath, args, in.ExtraNoOut)
 		err = extraProcess.Start()
@@ -358,7 +377,7 @@ func (s *server) IsPrivileged(ctx context.Context, _ *gen.EmptyReq) (*gen.IsPriv
 }
 
 func (s *server) SpeedTest(ctx context.Context, in *gen.SpeedTestRequest) (*gen.SpeedTestResponse, error) {
-	if !in.TestDownload && !in.TestUpload {
+	if !in.TestDownload && !in.TestUpload && !in.SimpleDownload {
 		return nil, errors.New("cannot run empty test")
 	}
 	var testInstance *boxbox.Box
@@ -387,7 +406,7 @@ func (s *server) SpeedTest(ctx context.Context, in *gen.SpeedTestRequest) (*gen.
 		outboundTags = []string{outbound.Tag()}
 	}
 
-	results := BatchSpeedTest(testCtx, testInstance, outboundTags, in.TestDownload, in.TestUpload)
+	results := BatchSpeedTest(testCtx, testInstance, outboundTags, in.TestDownload, in.TestUpload, in.SimpleDownload, in.SimpleDownloadAddr)
 
 	res := make([]*gen.SpeedTestResult, 0)
 	for _, data := range results {

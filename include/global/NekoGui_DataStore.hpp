@@ -7,7 +7,6 @@ namespace NekoGui {
     class Routing : public JsonStore {
     public:
         int current_route_id = 0;
-        QString def_outbound = "proxy";
 
         // DNS
         QString remote_dns = "tls://8.8.8.8";
@@ -83,6 +82,7 @@ namespace NekoGui {
         bool enable_stats = true;
         QString stats_tab = ""; // either connection or log
         int speed_test_mode = TestConfig::FULL;
+        QString simple_dl_url = "http://cachefly.cachefly.net/1mb.test";
 
         // Subscription
         QString user_agent = ""; // set at main.cpp
@@ -98,6 +98,7 @@ namespace NekoGui {
         // Security
         bool skip_cert = false;
         QString utlsFingerprint = "";
+        bool disable_run_admin = false; // windows only
 
         // Remember
         QStringList remember_spmode = {};

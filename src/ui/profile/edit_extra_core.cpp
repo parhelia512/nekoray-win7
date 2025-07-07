@@ -34,6 +34,10 @@ void EditExtraCore::onStart(std::shared_ptr<NekoGui::ProxyEntity> _ent) {
         {
             return;
         }
+        if (!QDir::current().relativeFilePath(f).startsWith("../../"))
+        {
+            f = QDir::current().relativeFilePath(f);
+        }
         if (NekoGui::profileManager->AddExtraCorePath(f)) ui->path_combo->addItem(f);
         ui->path_combo->setCurrentText(f);
         ui->path_combo->setSizeAdjustPolicy(QComboBox::AdjustToContents);
@@ -43,14 +47,6 @@ void EditExtraCore::onStart(std::shared_ptr<NekoGui::ProxyEntity> _ent) {
 
 bool EditExtraCore::onEnd() {
     auto bean = ent->ExtraCoreBean();
-    if (!ui->args->text().contains("%s"))
-    {
-        runOnUiThread([=]
-        {
-           MessageBoxWarning("Invalid args", "Args should have a %s as the placeholder for config file path.");
-        });
-        return false;
-    }
     bean->socksAddress = ui->socks_address->text();
     bean->socksPort = ui->socks_port->text().toInt();
     bean->extraCoreConf = ui->config->toPlainText();
