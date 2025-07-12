@@ -1,6 +1,6 @@
 Name "Nekoray"
 OutFile "NekoraySetup.exe"
-InstallDir "$PROGRAMFILES\Nekoray"
+InstallDir $APPDATA\Nekoray
 RequestExecutionLevel admin
 
 !include MUI2.nsh
