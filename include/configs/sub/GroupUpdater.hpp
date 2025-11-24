@@ -1,6 +1,7 @@
 #pragma once
 
 #include "include/dataStore/Database.hpp"
+#include <memory>
 
 namespace Subscription {
     class RawUpdater {
@@ -31,7 +32,7 @@ namespace Subscription {
         void asyncUpdateCallback(int gid);
     };
 
-    extern GroupUpdater *groupUpdater;
+    extern std::unique_ptr<GroupUpdater> groupUpdater;
 } // namespace Subscription
 
 void UI_update_all_groups(bool onlyAllowed = false);

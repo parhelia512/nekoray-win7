@@ -7,12 +7,13 @@
 #include <QInputDialog>
 #include <QUrlQuery>
 #include <QJsonDocument>
+#include <memory>
 
 #include "3rdparty/fkYAML/node.hpp"
 
 namespace Subscription {
 
-    GroupUpdater *groupUpdater = new GroupUpdater;
+    std::unique_ptr<GroupUpdater> groupUpdater = std::make_unique<GroupUpdater>();
 
     int JsonEndIdx(const QString &str, int begin) {
         int sz = str.length();
