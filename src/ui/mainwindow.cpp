@@ -695,8 +695,8 @@ void MainWindow::dropEvent(QDropEvent* event)
 }
 
 MainWindow::~MainWindow() {
-    delete tray;
-    delete core_process;
+    if (tray) delete tray;
+    if (core_process) delete core_process;
     delete ui;
 }
 
