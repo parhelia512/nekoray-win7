@@ -5,6 +5,10 @@
 
 namespace Configs
 {
+    void Group::clearCalculatedColumnWidth() {
+        calculated_column_width.clear();
+    }
+
     QList<int> Group::Profiles() const {
         return profiles;
     }

@@ -381,14 +381,17 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
                 group->test_items_to_show == Configs::testShowItems::speedOnly);
 
             auto updateTestItemsToShow = [this, group, actionShowOutIP, actionShowSpeed] {
-                const bool ip = actionShowOutIP->isChecked();
-                const bool speed = actionShowSpeed->isChecked();
-                if (ip && speed) group->test_items_to_show = Configs::testShowItems::all;
-                else if (ip) group->test_items_to_show = Configs::testShowItems::ipOnly;
-                else if (speed) group->test_items_to_show = Configs::testShowItems::speedOnly;
-                else group->test_items_to_show = Configs::testShowItems::none;
-                Configs::dataManager->groupsRepo->Save(group);
-                refresh_proxy_list();
+                    const bool ip = actionShowOutIP->isChecked();
+                    const bool speed = actionShowSpeed->isChecked();
+                    if (ip && speed) group->test_items_to_show = Configs::testShowItems::all;
+                    else if (ip) group->test_items_to_show = Configs::testShowItems::ipOnly;
+                    else if (speed) group->test_items_to_show = Configs::testShowItems::speedOnly;
+                    else group->test_items_to_show = Configs::testShowItems::none;
+                    Configs::dataManager->groupsRepo->Save(group);
+                    if (group->calculated_column_width.size() > 3) {
+                        group->calculated_column_width[3] = 0;
+                    }
+                    refresh_proxy_list();
                 };
 
             connect(actionShowOutIP, &QAction::triggered, this, updateTestItemsToShow);
@@ -486,6 +489,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->profilesTableView->verticalHeader()->setDefaultSectionSize(24);
     ui->profilesTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     ui->profilesTableView->setTabKeyNavigation(false);
+    ui->profilesTableView->horizontalHeader()->setResizeContentsPrecision(0);
+
+    connect(ui->profilesTableView->verticalScrollBar(), &QScrollBar::valueChanged, ui->profilesTableView, [=, this] {
+        refresh_proxy_list_column_size();
+    }, Qt::QueuedConnection);
 
     // search box
     connect(static_cast<ProfilesTableFilterHeader*>(ui->profilesTableView->horizontalHeader()), &ProfilesTableFilterHeader::typeFilterChanged, this, [=,this](const QString& currentText)
@@ -982,29 +990,6 @@ void MainWindow::show_group(int gid) {
                 ui->profilesTableView->scrollTo(idx, QAbstractItemView::PositionAtTop);
             }
         }
-        auto *hHeader = dynamic_cast<ProfilesTableFilterHeader*>(ui->profilesTableView->horizontalHeader());
-        hHeader->blockSignals(true);
-        if (group->column_width.isEmpty()) {
-            hHeader->setResizeContentsPrecision(40);
-            hHeader->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-            hHeader->setSectionResizeMode(1, QHeaderView::Stretch);
-            hHeader->setSectionResizeMode(2, QHeaderView::Stretch);
-            hHeader->setSectionResizeMode(3, QHeaderView::ResizeToContents);
-            hHeader->setSectionResizeMode(4, QHeaderView::ResizeToContents);
-            ui->profilesTableView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        } else {
-            for (int i=0;i<group->column_width.size();i++) {
-                hHeader->resizeSection(i, group->column_width.at(i));
-            }
-            ui->profilesTableView->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-        }
-        for (int i=0;i<=4;i++) {
-            auto size = hHeader->sectionSize(i);
-            hHeader->setSectionResizeMode(i, QHeaderView::Interactive);
-            hHeader->resizeSection(i, size);
-        }
-        hHeader->adjustPositions();
-        hHeader->blockSignals(false);
     });
 
     Configs::dataManager->settingsRepo->refreshing_group = false;
@@ -1755,6 +1740,48 @@ void MainWindow::refresh_groups() {
     Configs::dataManager->settingsRepo->refreshing_group_list = false;
 }
 
+void MainWindow::refresh_proxy_list_column_size() {
+    auto group = Configs::dataManager->groupsRepo->CurrentGroup();
+    if (!group) return;
+
+    auto *hHeader = dynamic_cast<ProfilesTableFilterHeader*>(ui->profilesTableView->horizontalHeader());
+    QTimer::singleShot(0, ui->profilesTableView, [=, this]() {
+        hHeader->blockSignals(true);
+        if (group->column_width.isEmpty()) {
+            hHeader->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+            hHeader->setSectionResizeMode(1, QHeaderView::Stretch);
+            hHeader->setSectionResizeMode(2, QHeaderView::Stretch);
+            hHeader->setSectionResizeMode(3, QHeaderView::ResizeToContents);
+            hHeader->setSectionResizeMode(4, QHeaderView::ResizeToContents);
+            if (group->calculated_column_width.size() > 3 && group->calculated_column_width[3] > hHeader->sectionSize(3)) {
+                hHeader->setSectionResizeMode(3, QHeaderView::Fixed);
+                hHeader->resizeSection(3, group->calculated_column_width[3]);
+            }
+            if (group->calculated_column_width.size() > 4 && group->calculated_column_width[4] > hHeader->sectionSize(4)) {
+                hHeader->setSectionResizeMode(4, QHeaderView::Fixed);
+                hHeader->resizeSection(4, group->calculated_column_width[4]);
+            }
+            ui->profilesTableView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+            group->clearCalculatedColumnWidth();
+            for (int i=0;i<=4;i++) {
+                auto size = hHeader->sectionSize(i);
+                hHeader->setSectionResizeMode(i, QHeaderView::Interactive);
+                hHeader->resizeSection(i, size);
+                group->calculated_column_width << size;
+            }
+        } else {
+            group->clearCalculatedColumnWidth();
+            for (int i=0;i<=4;i++) {
+                hHeader->setSectionResizeMode(i, QHeaderView::Interactive);
+                hHeader->resizeSection(i, group->column_width.at(i));
+            }
+            ui->profilesTableView->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+        }
+        hHeader->adjustPositions();
+        hHeader->blockSignals(false);
+    });
+}
+
 void MainWindow::refresh_proxy_list(const QList<int>& ids, bool mayNeedReset) {
     refresh_proxy_list_impl(ids, mayNeedReset);
 }
@@ -1768,8 +1795,8 @@ void MainWindow::refresh_proxy_list_impl(const QList<int>& ids, bool mayNeedRese
     }
     // refresh data
     refresh_proxy_list_impl_refresh_data(ids, mayNeedReset);
-    // now refresh to resize columns
-    show_group(currentGroup->id);
+    // now refresh column sizes
+    refresh_proxy_list_column_size();
 }
 
 void MainWindow::refresh_proxy_list_impl_refresh_data(const QList<int>& ids, bool mayNeedReset) {
@@ -1867,10 +1894,13 @@ void MainWindow::on_menu_reset_traffic_triggered() {
     auto entIDs = get_now_selected_list();
     if (entIDs.count() == 0) return;
     auto ents = Configs::dataManager->profilesRepo->GetProfileBatch(entIDs);
+    if (ents.empty()) return;
     for (const auto& ent: ents) {
         ent->ResetTraffic();
         Configs::dataManager->profilesRepo->SaveTraffic(ent);
     }
+    if (auto group = Configs::dataManager->groupsRepo->GetGroup(ents.first()->gid); group &&
+        group->calculated_column_width.size() > 4) group->calculated_column_width[4] = 0;
     refresh_proxy_list(entIDs);
 }
 
@@ -2131,10 +2161,13 @@ void MainWindow::on_menu_scan_qr_triggered() {
 void MainWindow::on_menu_clear_test_result_triggered() {
     auto entIDs = get_selected_or_group();
     auto ents = Configs::dataManager->profilesRepo->GetProfileBatch(entIDs);
+    if (ents.empty()) return;
     for (const auto &ent: ents) {
         ent->ClearTestResults();
     }
     Configs::dataManager->profilesRepo->SaveBatch(ents);
+    if (auto group = Configs::dataManager->groupsRepo->GetGroup(ents.first()->gid); group &&
+        group->calculated_column_width.size() > 3) group->calculated_column_width[3] = 0;
     refresh_proxy_list();
 }
 

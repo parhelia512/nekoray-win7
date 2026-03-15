@@ -245,6 +245,8 @@ private:
 
     void dialog_message_impl(const QString &sender, const QString &info);
 
+    void refresh_proxy_list_column_size();
+
     void refresh_proxy_list_impl(const QList<int> &ids = {}, bool mayNeedReset = false);
 
     void refresh_proxy_list_impl_refresh_data(const QList<int>& ids = {}, bool mayNeedReset = false);
