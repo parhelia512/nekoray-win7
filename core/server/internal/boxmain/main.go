@@ -88,6 +88,6 @@ func newBoxContext() context.Context {
 		ctx = filemanager.WithDefault(ctx, "", "", sudoUID, sudoGID)
 	}
 	ctx = service.ContextWith(ctx, deprecated.NewStderrManager(log.StdLogger()))
-	ctx = box.Context(ctx, include.InboundRegistry(), include.OutboundRegistry(), include.EndpointRegistry(), include.DNSTransportRegistry(), include.ServiceRegistry())
+	ctx = box.Context(ctx, include.InboundRegistry(), include.OutboundRegistry(), include.EndpointRegistry(), include.DNSTransportRegistry(), include.ServiceRegistry(), include.CertificateProviderRegistry())
 	return ctx
 }
