@@ -10,8 +10,8 @@ github.com/RyuaNerin/go-krypto v1.3.0 h1:smavTzSMAx8iuVlGb4pEwl9MD2qicqMzuXR2QWp
 github.com/RyuaNerin/go-krypto v1.3.0/go.mod h1:9R9TU936laAIqAmjcHo/LsaXYOZlymudOAxjaBf62UM=
 github.com/RyuaNerin/testingutil v0.1.0 h1:IYT6JL57RV3U2ml3dLHZsVtPOP6yNK7WUVdzzlpNrss=
 github.com/RyuaNerin/testingutil v0.1.0/go.mod h1:yTqj6Ta/ycHMPJHRyO12Mz3VrvTloWOsy23WOZH19AA=
-github.com/Throneproj/sing-box v1.11.16-0.20260814225404-ca9e5de5e9a2 h1:HMPr31QUgSLc3sx7xyBiy55YMjd2ucNvByDmkKfuepE=
-github.com/Throneproj/sing-box v1.11.16-0.20260814225404-ca9e5de5e9a2/go.mod h1:UTK7eZzh/E8MsqUkfgsbiSExfgUvKXCIwG8otxRxlPs=
+github.com/Throneproj/sing-box v1.11.16-0.20260814233756-6193086833dd h1:hXbTLrpzaNj5eCTwHBVqEZEp1Jd4LVigBQZCg6leJwo=
+github.com/Throneproj/sing-box v1.11.16-0.20260814233756-6193086833dd/go.mod h1:UTK7eZzh/E8MsqUkfgsbiSExfgUvKXCIwG8otxRxlPs=
 github.com/ajg/form v1.5.1 h1:t9c7v8JUKu/XxOGBU0yjNpaMloxGEJhUkqFRq0ibGeU=
 github.com/ajg/form v1.5.1/go.mod h1:uL1WgH+h2mgNtvBq0339dVnzXdBETtL2LeUXaIv25UY=
 github.com/akutz/memconn v0.1.0 h1:NawI0TORU4hcOMsMr11g7vwlCdkYeLKXBcxWu2W/P8A=
