@@ -30,15 +30,17 @@ namespace Configs {
     // profiles -> groups, groups_order, profiles tables
     // routes   -> route_profiles, route_rules tables
     // settings -> settings table
+    // otp      -> otp_profiles table
     // icons    -> icons/ folder (handled by the UI layer, not the database)
     struct BackupParts {
         bool profiles = false;
         bool routes = false;
         bool settings = false;
+        bool otp = false;
         bool icons = false;
 
-        [[nodiscard]] bool anyDb() const { return profiles || routes || settings; }
-        [[nodiscard]] bool any() const { return profiles || routes || settings || icons; }
+        [[nodiscard]] bool anyDb() const { return profiles || routes || settings || otp; }
+        [[nodiscard]] bool any() const { return anyDb() || icons; }
     };
 
     // Max bound parameters per statement (SQLite default SQLITE_MAX_VARIABLE_NUMBER is 999).

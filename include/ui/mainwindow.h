@@ -49,6 +49,7 @@ namespace Configs_sys {
 }
 
 class TrayProfileSelector;
+class TrayOtpCodes;
 class TestRunner;
 
 namespace Qv2ray::ui { class SyntaxHighlighter; }
@@ -150,6 +151,10 @@ private slots:
 
     void on_menu_vpn_settings_triggered();
 
+    void on_menu_preset_settings_triggered();
+
+    void on_menu_otp_manager_triggered();
+
     void on_menu_hotkey_settings_triggered();
 
     void on_menu_add_from_input_triggered();
@@ -210,6 +215,8 @@ private:
     QMenu *trayMenu = nullptr;    // tray context menu
     QPointer<TrayProfileSelector> traySelector;
     void openTraySelector(bool routing);
+    QPointer<TrayOtpCodes> trayOtpCodes;
+    void openTrayOtpCodes();
     QShortcut *shortcut_esc = new QShortcut(QKeySequence::Cancel, this);
     //
     QThreadPool *parallelCoreCallPool = new QThreadPool(this);

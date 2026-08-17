@@ -771,6 +771,7 @@ QTabBar::tab:selected {
     <addaction name="menu_basic_settings"/>
     <addaction name="menu_routing_settings"/>
     <addaction name="menu_vpn_settings"/>
+    <addaction name="menu_preset_settings"/>
     <addaction name="menu_hotkey_settings"/>
     <addaction name="menu_open_config_folder"/>
    </widget>
@@ -844,6 +845,8 @@ QTabBar::tab:selected {
     </property>
     <addaction name="actionAuto_Selector"/>
     <addaction name="actionSpeedtest_Current"/>
+    <addaction name="separator"/>
+    <addaction name="menu_otp_manager"/>
     <addaction name="separator"/>
     <addaction name="actionRuntime_Stats"/>
     <addaction name="actionTraffic_Stats"/>
@@ -1172,6 +1175,16 @@ QTabBar::tab:selected {
   <action name="menu_vpn_settings">
    <property name="text">
     <string>Tun Settings</string>
+   </property>
+  </action>
+  <action name="menu_preset_settings">
+   <property name="text">
+    <string>Preset Settings</string>
+   </property>
+  </action>
+  <action name="menu_otp_manager">
+   <property name="text">
+    <string>OTP Manager</string>
    </property>
   </action>
   <action name="actionRestart_Program">

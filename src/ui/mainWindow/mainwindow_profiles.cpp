@@ -4,7 +4,6 @@
 #include <QCheckBox>
 #include <QClipboard>
 #include <QDialog>
-#include <QEventLoop>
 #include <QFile>
 #include <QGuiApplication>
 #include <QItemSelectionModel>
@@ -15,24 +14,19 @@
 #include <QMutex>
 #include <QPlainTextEdit>
 #include <QPushButton>
-#include <QScreen>
 #include <QScrollBar>
 #include <QThread>
 #include <QThreadPool>
-#include <QUuid>
 #include <QVBoxLayout>
 
 #include <algorithm>
 #include <atomic>
 #include <ranges>
 
-#ifdef Q_OS_LINUX
-#include <QDBusConnection>
-#include <QDBusInterface>
-#endif
-
 #include "3rdparty/QrDecoder.h"
 #include "3rdparty/qrcodegen.hpp"
+
+#include "include/ui/utils/ScreenQrScanner.h"
 
 #include "include/configs/generate.h"
 #include "include/configs/sub/GroupUpdater.hpp"
@@ -319,86 +313,9 @@ void MainWindow::display_qr_link(bool nkrFormat) {
     w->deleteLater();
 }
 
-#ifdef Q_OS_LINUX
-OrgFreedesktopPortalRequestInterface::OrgFreedesktopPortalRequestInterface(
-  const QString& service,
-  const QString& path,
-  const QDBusConnection& connection,
-  QObject* parent)
-  : QDBusAbstractInterface(service,
-                           path,
-                           "org.freedesktop.portal.Request",
-                           connection,
-                           parent)
-{}
-
-OrgFreedesktopPortalRequestInterface::~OrgFreedesktopPortalRequestInterface() {}
-#endif
-
-static QPixmap grabScreen(QScreen* screen, bool& ok)
-{
-    QPixmap p;
-    QRect geom = screen->geometry();
-#ifdef Q_OS_LINUX
-    if (qEnvironmentVariable("XDG_SESSION_TYPE") == "wayland" || qEnvironmentVariable("WAYLAND_DISPLAY").contains("wayland", Qt::CaseInsensitive)) {
-        QDBusInterface screenshotInterface(
-          QStringLiteral("org.freedesktop.portal.Desktop"),
-          QStringLiteral("/org/freedesktop/portal/desktop"),
-          QStringLiteral("org.freedesktop.portal.Screenshot"));
-
-        // unique token
-        QString token =
-          QUuid::createUuid().toString().remove('-').remove('{').remove('}');
-
-        // premake interface
-        auto* request = new OrgFreedesktopPortalRequestInterface(
-          QStringLiteral("org.freedesktop.portal.Desktop"),
-          "/org/freedesktop/portal/desktop/request/" +
-            QDBusConnection::sessionBus().baseService().remove(':').replace('.','_') +
-            "/" + token,
-          QDBusConnection::sessionBus());
-
-        QEventLoop loop;
-        const auto gotSignal = [&p, &loop](uint status, const QVariantMap& map) {
-            if (status == 0) {
-                // Parse this as URI to handle unicode properly
-                QUrl uri = map.value("uri").toString();
-                QString uriString = uri.toLocalFile();
-                p = QPixmap(uriString);
-                p.setDevicePixelRatio(qApp->devicePixelRatio());
-                QFile imgFile(uriString);
-                imgFile.remove();
-            }
-            loop.quit();
-        };
-
-        // prevent racy situations and listen before calling screenshot
-        QMetaObject::Connection conn = QObject::connect(
-          request, &org::freedesktop::portal::Request::Response, gotSignal);
-
-        screenshotInterface.call(
-          QStringLiteral("Screenshot"),
-          "",
-          QMap<QString, QVariant>({ { "handle_token", QVariant(token) },
-                                    { "interactive", QVariant(false) } }));
-
-        loop.exec();
-        QObject::disconnect(conn);
-        request->Close().waitForFinished();
-        request->deleteLater();
-
-        if (p.isNull()) {
-            ok = false;
-        }
-        return p;
-    } else
-#endif
-        return screen->grabWindow(0, geom.x(), geom.y(), geom.width(), geom.height());
-}
-
 void MainWindow::parseQrImage(const QPixmap *image)
 {
-    const QVector<QString> texts = QrDecoder().decode(image->toImage().convertToFormat(QImage::Format_Grayscale8));
+    const QVector<QString> texts = QrDecoder().decode(image->toImage());
     if (texts.isEmpty()) {
         MessageBoxInfo(software_name, tr("QR Code not found"));
     } else {
@@ -410,18 +327,20 @@ void MainWindow::parseQrImage(const QPixmap *image)
 }
 
 void MainWindow::on_menu_scan_qr_triggered() {
-    hide();
-    QThread::sleep(1);
+    bool captured = false;
+    const auto texts = ScreenQr::ScanScreens(this, captured);
 
-    bool ok = true;
-    QPixmap qpx(grabScreen(QGuiApplication::primaryScreen(), ok));
-
-    show();
-    if (ok) {
-        parseQrImage(&qpx);
-    }
-    else {
+    if (!captured) {
         MessageBoxInfo(software_name, tr("Unable to capture screen"));
+        return;
+    }
+    if (texts.isEmpty()) {
+        MessageBoxInfo(software_name, tr("QR Code not found"));
+        return;
+    }
+    for (const QString &text : texts) {
+        MW_show_log("QR Code Result:\n" + text);
+        Subscription::groupUpdater->AsyncUpdate(text);
     }
 }
 

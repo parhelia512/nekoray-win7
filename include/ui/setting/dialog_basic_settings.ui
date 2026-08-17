@@ -1594,6 +1594,16 @@ QTabBar::tab:hover:!selected {
            </widget>
           </item>
           <item>
+           <widget class="QCheckBox" name="backup_inc_otp">
+            <property name="text">
+             <string>OTP profiles</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QCheckBox" name="backup_inc_icons">
             <property name="text">
              <string>Custom icons</string>

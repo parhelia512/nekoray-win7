@@ -19,6 +19,8 @@
 #include "include/ui/setting/dialog_basic_settings.h"
 #include "include/ui/setting/dialog_hotkey.h"
 #include "include/ui/setting/dialog_manage_routes.h"
+#include "include/ui/setting/dialog_otp_manager.h"
+#include "include/ui/setting/dialog_preset_settings.h"
 #include "include/ui/setting/dialog_vpn_settings.h"
 
 #ifdef Q_OS_WIN
@@ -64,6 +66,14 @@ void MainWindow::on_menu_routing_settings_triggered() {
 
 void MainWindow::on_menu_vpn_settings_triggered() {
     USE_DIALOG(DialogVPNSettings)
+}
+
+void MainWindow::on_menu_preset_settings_triggered() {
+    USE_DIALOG(DialogPresetSettings)
+}
+
+void MainWindow::on_menu_otp_manager_triggered() {
+    USE_DIALOG(DialogOtpManager)
 }
 
 void MainWindow::on_menu_hotkey_settings_triggered() {

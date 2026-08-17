@@ -1,5 +1,6 @@
 #include "include/database/Database.h"
 #include <3rdparty/SQLiteCpp/include/Backup.h>
+#include <algorithm>
 #include <set>
 
 namespace Configs {
@@ -189,6 +190,7 @@ namespace Configs {
         const std::vector<std::string> kProfileTables = {"profiles", "groups_order", "groups"};
         const std::vector<std::string> kRouteTables = {"route_rules", "route_profiles"};
         const std::vector<std::string> kSettingsTables = {"settings"};
+        const std::vector<std::string> kOtpTables = {"otp_profiles"};
 
         std::vector<std::string> tableColumns(SQLite::Database& d, const std::string& schema, const std::string& table) {
             std::vector<std::string> cols;
@@ -202,6 +204,13 @@ namespace Configs {
             SQLite::Statement q(d, "SELECT 1 FROM " + schema + ".sqlite_master WHERE type='table' AND name=?");
             q.bind(1, table);
             return q.executeStep();
+        }
+
+        bool columnExists(SQLite::Database& d, const std::string& schema, const std::string& table,
+                          const std::string& column) {
+            if (!tableExists(d, schema, table)) return false;
+            const auto cols = tableColumns(d, schema, table);
+            return std::find(cols.begin(), cols.end(), column) != cols.end();
         }
 
         // Replace every row of main.<table> with the rows from bak.<table>,
@@ -247,6 +256,7 @@ namespace Configs {
         if (!parts.profiles) wipe(kProfileTables);
         if (!parts.routes) wipe(kRouteTables);
         if (!parts.settings) wipe(kSettingsTables);
+        if (!parts.otp) wipe(kOtpTables);
         try { dest.exec("VACUUM"); } catch (...) {}
     }
 
@@ -267,6 +277,7 @@ namespace Configs {
             if (parts.profiles) for (const auto& t : kProfileTables) copyTable(db, t);
             if (parts.routes) for (const auto& t : kRouteTables) copyTable(db, t);
             if (parts.settings) for (const auto& t : kSettingsTables) copyTable(db, t);
+            if (parts.otp) for (const auto& t : kOtpTables) copyTable(db, t);
 
             // Keep the ID counters ahead of any restored data so freshly created
             // profiles/groups/routes never collide with restored ones.
@@ -283,6 +294,14 @@ namespace Configs {
                     "route_profile_last_id = MAX(route_profile_last_id,"
                     "(SELECT COALESCE(MAX(id),0) FROM route_profiles)" +
                     std::string(bakIds ? ",(SELECT COALESCE(MAX(route_profile_last_id),0) FROM bak.entity_ids)" : "") + ")");
+            }
+
+            if (parts.otp) {
+                const bool bakOtpIds = columnExists(db, "bak", "entity_ids", "otp_profile_last_id");
+                db.exec(
+                    "UPDATE entity_ids SET otp_profile_last_id = MAX(otp_profile_last_id,"
+                    "(SELECT COALESCE(MAX(id),0) FROM otp_profiles)" +
+                    std::string(bakOtpIds ? ",(SELECT COALESCE(MAX(otp_profile_last_id),0) FROM bak.entity_ids)" : "") + ")");
             }
 
             db.exec("COMMIT");

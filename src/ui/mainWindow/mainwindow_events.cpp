@@ -6,6 +6,7 @@
 #include <QMimeData>
 #include <QTimer>
 
+#include "include/ui/widget/TrayOtpCodes.hpp"
 #include "include/ui/widget/TrayProfileSelector.hpp"
 
 void MainWindow::trayClickEvent() {
@@ -169,6 +170,12 @@ void MainWindow::openTraySelector(bool routing) {
     traySelector = new TrayProfileSelector(
         routing ? TrayProfileSelector::Routing : TrayProfileSelector::Server, cb, this);
     traySelector->popupAt(QCursor::pos());
+}
+
+void MainWindow::openTrayOtpCodes() {
+    if (trayOtpCodes) trayOtpCodes->close();
+    trayOtpCodes = new TrayOtpCodes(this);
+    trayOtpCodes->popupAt(QCursor::pos());
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {

@@ -16,6 +16,10 @@
         <file>icon/material/history.png</file>
         <file>icon/material/swap-vertical.png</file>
         <file>icon/material/delete.png</file>
+        <file>icon/material/pencil-outline.png</file>
+        <file>icon/material/qrcode.png</file>
+        <file>icon/material/eye-outline.png</file>
+        <file>icon/material/eye-off-outline.png</file>
         <file>icon/material/swap-horizontal.png</file>
     </qresource>
     <qresource prefix="/Throne">

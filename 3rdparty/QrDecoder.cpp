@@ -1,6 +1,7 @@
 #include "QrDecoder.h"
 
 #include "quirc/quirc.h"
+#include <cstring>
 #include <qdebug.h>
 
 #include "quirc/quirc_internal.h"
@@ -23,7 +24,17 @@ QVector<QString> QrDecoder::decode(const QImage &image)
         return result;
     }
 
-    if (quirc_resize(m_qr, image.width(), image.height()) < 0)
+    const QImage grey = image.format() == QImage::Format_Grayscale8
+                            ? image
+                            : image.convertToFormat(QImage::Format_Grayscale8);
+    const int width = grey.width();
+    const int height = grey.height();
+    if (width <= 0 || height <= 0)
+    {
+        return result;
+    }
+
+    if (quirc_resize(m_qr, width, height) < 0)
     {
         return result;
     }
@@ -33,7 +44,11 @@ QVector<QString> QrDecoder::decode(const QImage &image)
     {
         return result;
     }
-    std::copy(image.constBits(), image.constBits() + image.width()*image.height(), rawImage);
+    // QImage pads scanlines to 4 bytes, quirc wants them packed: copying straight through shears it.
+    for (int y = 0; y < height; ++y)
+    {
+        std::memcpy(rawImage + static_cast<size_t>(y) * width, grey.constScanLine(y), width);
+    }
     quirc_end(m_qr);
 
     const int count = quirc_count(m_qr);
@@ -51,7 +66,7 @@ QVector<QString> QrDecoder::decode(const QImage &image)
         const quirc_decode_error_t err = quirc_decode(&code, &data);
         if (err == QUIRC_SUCCESS)
         {
-            result.append(QLatin1String((const char *)data.payload));
+            result.append(QString::fromUtf8((const char *)data.payload, data.payload_len));
         }
     }
 
