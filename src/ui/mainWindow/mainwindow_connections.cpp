@@ -69,8 +69,9 @@ void MainWindow::setupConnectionList()
     // Otherwise the five content-sized columns re-measure up to 1000 rows whenever a poll changes the count.
     header->setResizeContentsPrecision(20);
     ui->connections->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    // Otherwise a header click runs selectColumn() and the whole column paints as selected.
-    ui->connections->setSelectionMode(QAbstractItemView::NoSelection);
+    ui->connections->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->connections->setSelectionMode(QAbstractItemView::SingleSelection);
+    ui->connections->setAlternatingRowColors(true);
     ui->connections->setWordWrap(false);
 
     refreshConnectionCloseIcons();
