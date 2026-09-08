@@ -156,7 +156,11 @@ namespace Configs {
                 std::shared_ptr<Profile> chainWrapper;
             };
             QList<RouteOutboundGroup> routeOutboundGroups;
-            QList<QList<int>> auxEndpointGroups;
+            struct AuxEndpointGroup {
+                QList<int> hopIDs;
+                QList<int> innerHopIndexes;
+            };
+            QList<AuxEndpointGroup> auxEndpointGroups;
         };
 
         struct BuildPrerequisites {
@@ -615,7 +619,17 @@ namespace Configs {
                     }
                     usedProfileIDs << endpointID;
                     for (int hopID : hopIDs) usedProfileIDs << hopID;
-                    preReqs.routing.auxEndpointGroups << hopIDs;
+                    RoutingDeps::AuxEndpointGroup auxGroup{hopIDs, {}};
+                    if (routeChain->innerHopEndpointIDs.contains(endpointID)) {
+                        // preferred_by needs an outbound that advertises routes; naming any other hop fails core start.
+                        for (qsizetype i = 1; i < hopIDs.size(); i++) {
+                            const auto hopEnt = dataManager->profilesRepo->GetProfile(hopIDs[i]);
+                            if (hopEnt == nullptr || (hopEnt->type != "openvpn" && hopEnt->type != "openconnect")) continue;
+                            auxGroup.innerHopIndexes << static_cast<int>(i);
+                            preReqs.routing.outboundMap[hopIDs[i]] = hopTag(tags::auxEndpointPrefix, auxSuffix + static_cast<int>(i));
+                        }
+                    }
+                    preReqs.routing.auxEndpointGroups << auxGroup;
                     preReqs.routing.outboundMap[endpointID] = hopTag(tags::auxEndpointPrefix, auxSuffix);
                     auxSuffix += static_cast<int>(hopIDs.size());
                 }
@@ -1265,6 +1279,7 @@ namespace Configs {
             bool markIngress = false;
             bool warpWrap = false;
             bool auxiliary = false;
+            QSet<QString> addressableTags;
         };
 
         void buildSingboxChain(BuildContext &ctx, const QList<std::shared_ptr<Profile>> &ents, const hopChainOptions &opts) {
@@ -1279,7 +1294,7 @@ namespace Configs {
                 if (opts.markIngress && idx == 0) ctx.singIngressTags << tag;
                 const auto& ent = ents[idx];
                 // Only the head hop (and warp's wrapped outbound) gets a tag rules can name.
-                const bool addressableHop = idx == 0 || (opts.warpWrap && idx == 1);
+                const bool addressableHop = idx == 0 || (opts.warpWrap && idx == 1) || opts.addressableTags.contains(tag);
                 if (addressableHop && (ent->type == "openvpn" || ent->type == "openconnect")) {
                     ctx.result->vpnEndpointProfiles.insert(tag, ent->id);
                     const auto *ovpn = ent->OpenVPN();
@@ -1370,6 +1385,7 @@ namespace Configs {
             bool soleXrayInbound = false;
             bool warpWrap = false;
             bool auxiliary = false;
+            QSet<QString> addressableTags;
         };
 
         QString buildOutboundChain(BuildContext &ctx, const ChainBuildRequest &req)
@@ -1471,6 +1487,7 @@ namespace Configs {
                 .markIngress = false,
                 .warpWrap = req.warpWrap,
                 .auxiliary = req.auxiliary,
+                .addressableTags = req.addressableTags,
             };
             const int tailingStartSuffix = req.startSuffix + static_cast<int>(initialSingEnts.size());
             if (!initialSingEnts.isEmpty()) {
@@ -1797,18 +1814,23 @@ namespace Configs {
             // preferred_by resolves an endpoint out of the endpoint manager, so nothing detours into these.
             if (!ctx.forTest) {
                 int auxSuffix = 0;
-                for (const auto &hopIDs : ctx.prerequisites.routing.auxEndpointGroups) {
+                for (const auto &group : ctx.prerequisites.routing.auxEndpointGroups) {
+                    QList<QString> innerTags;
+                    for (const int idx : group.innerHopIndexes)
+                        innerTags << hopTag(tags::auxEndpointPrefix, auxSuffix + idx);
                     const auto tag = buildOutboundChain(ctx, {
-                        .hopIDs = hopIDs,
+                        .hopIDs = group.hopIDs,
                         .prefix = tags::auxEndpointPrefix,
                         .includeProxy = false,
-                        .link = hopIDs.size() > 1,
+                        .link = group.hopIDs.size() > 1,
                         .startSuffix = auxSuffix,
                         .auxiliary = true,
+                        .addressableTags = QSet<QString>(innerTags.cbegin(), innerTags.cend()),
                     });
                     if (!ctx.error.isEmpty()) return;
                     ctx.vpnAuxTags << tag;
-                    auxSuffix += static_cast<int>(hopIDs.size());
+                    ctx.vpnAuxTags << innerTags;
+                    auxSuffix += static_cast<int>(group.hopIDs.size());
                 }
             }
 
@@ -2302,6 +2324,21 @@ namespace Configs {
         const auto exitEnt = dataManager->profilesRepo->GetProfile(hopIDs.first());
         if (exitEnt == nullptr) return false;
         return exitEnt->type == "openvpn" || exitEnt->type == "openconnect";
+    }
+
+    QList<int> AuxEndpointInnerHops(int endpointProfileID)
+    {
+        const auto ent = dataManager->profilesRepo->GetProfile(endpointProfileID);
+        if (ent == nullptr || ent->type != "chain" || !CanBeAuxEndpoint(ent)) return {};
+        QList<int> inner;
+        const auto hopIDs = unwrapChain(endpointProfileID);
+        for (qsizetype i = 1; i < hopIDs.size(); i++)
+        {
+            const auto hopEnt = dataManager->profilesRepo->GetProfile(hopIDs[i]);
+            if (hopEnt == nullptr || hopEnt->outbound == nullptr) continue;
+            if (hopEnt->type == "openvpn" || hopEnt->type == "openconnect") inner << hopIDs[i];
+        }
+        return inner;
     }
 
     bool IsValid(const std::shared_ptr<Profile>& ent)

@@ -39,6 +39,9 @@ namespace Configs {
         // Profile ids of openvpn/openconnect profiles run alongside this routing profile.
         QList<int> endpointProfileIDs;
 
+        // Subset of endpointProfileIDs whose inner endpoint hops are routable too.
+        QList<int> innerHopEndpointIDs;
+
         RouteProfile() = default;
 
         RouteProfile(const RouteProfile& other);
@@ -65,7 +68,10 @@ namespace Configs {
         // The positional placeholder paired with an endpoint, correlated by type + outboundID.
         static std::shared_ptr<RouteRule> MakeEndpointRule(int endpointProfileID);
 
-        // One endpointPreferredBy rule per listed endpoint; prunes orphans, appends missing. Raw: no-op.
+        // Each listed endpoint, followed by its opened-up inner hops.
+        QList<int> endpointRuleTargets() const;
+
+        // One endpointPreferredBy rule per endpointRuleTargets() entry; prunes orphans, appends missing. Raw: no-op.
         void SyncEndpointRules();
 
         std::shared_ptr<QList<int>> get_used_outbounds();

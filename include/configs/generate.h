@@ -113,5 +113,8 @@ namespace Configs
     // Eligible: an openvpn/openconnect profile, or a chain whose exit hop is one, never the reverse.
     bool CanBeAuxEndpoint(const std::shared_ptr<Profile> &ent);
 
+    // Hops behind the exit of a chain endpoint that are endpoints themselves, exit-first.
+    QList<int> AuxEndpointInnerHops(int endpointProfileID);
+
     std::shared_ptr<BuildTestConfigResult> BuildTestConfig(const QList<std::shared_ptr<Profile> > &profiles);
 }
