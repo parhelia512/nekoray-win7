@@ -1,6 +1,6 @@
 module ThroneCore
 
-go 1.27
+go 1.26
 
 require (
 	github.com/Mahdi-zarei/speedtest-go v1.7.13-0.20260107171856-79c565dfd83a
@@ -19,7 +19,7 @@ require (
 	google.golang.org/protobuf v1.36.12
 )
 
-replace github.com/xtls/xray-core => github.com/throneproj/xray-core v1.251015.1-0.20260909024224-3d5bd5dfed40
+replace github.com/xtls/xray-core => github.com/throneproj/xray-core v1.251015.1-0.20260909120523-7b26dbd842dc
 
 replace github.com/sagernet/sing-box => github.com/throneproj/sing-box v1.11.16-0.20260909113910-9f01a24b2f7c
 
