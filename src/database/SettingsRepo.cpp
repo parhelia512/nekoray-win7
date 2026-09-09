@@ -198,6 +198,8 @@ namespace Configs {
             {"log_exclude_regex",        &log_exclude_regex},
             {"warp_ifc_addrs",           &warp_ifc_addrs},
             {"vpn_private_ranges",       &vpn_private_ranges},
+            {"xray_geoip_url_history",   &xray_geoip_url_history},
+            {"xray_geosite_url_history", &xray_geosite_url_history},
             {"dial_bind_ifc_history",    &dial_bind_interface_history},
             {"dial_inet4_bind_history",  &dial_inet4_bind_address_history},
             {"dial_inet6_bind_history",  &dial_inet6_bind_address_history},
