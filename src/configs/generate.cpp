@@ -1351,10 +1351,15 @@ namespace Configs {
                     return;
                 }
                 object["tag"] = tag;
-                if (!nextTag.isEmpty() && (opts.link || bridgeConfig.needed)) object["proxySettings"] = QJsonObject{
-                    {"tag", nextTag},
-                    {"transportLayer", true}
-                };
+                // Xray removed outbound-level proxySettings; sockopt.dialerProxy is its 1:1 replacement.
+                if (!nextTag.isEmpty() && (opts.link || bridgeConfig.needed))
+                {
+                    auto streamObj = object["streamSettings"].toObject();
+                    auto sockoptObj = streamObj["sockopt"].toObject();
+                    sockoptObj["dialerProxy"] = nextTag;
+                    streamObj["sockopt"] = sockoptObj;
+                    object["streamSettings"] = streamObj;
+                }
                 ctx.xrayOutbounds.append(object);
             }
             if (bridgeConfig.needed) {
