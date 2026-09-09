@@ -2731,7 +2731,7 @@ Use a number followed by ns, us, ms, s, m, h or d.</source>
     </message>
 </context>
 <context>
-    <name>DialogRuntimeStats</name>
+    <name>RuntimeStatsWidget</name>
     <message>
         <source>%1 active   ·   %2 TCP   ·   %3 UDP</source>
         <translation>%1 активных   ·   %2 TCP   ·   %3 UDP</translation>

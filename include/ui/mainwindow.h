@@ -276,6 +276,7 @@ private:
     QIcon connectionCloseIcon;
     int toolTipID;
     SpeedWidget *speedChartWidget;
+    class RuntimeStatsWidget *runtimeStatsWidget = nullptr;
     std::atomic<qint64> lastUpdatedMs = QDateTime::currentMSecsSinceEpoch();
     DataViewHtmlGenerator dataViewHtmlGenerator_;
 

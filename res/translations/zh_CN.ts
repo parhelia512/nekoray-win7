@@ -2170,7 +2170,7 @@ For more information, see the document &quot;Configuration/DNS&quot;.</source>
     </message>
 </context>
 <context>
-    <name>DialogRuntimeStats</name>
+    <name>RuntimeStatsWidget</name>
     <message>
         <source>%1 active   ·   %2 TCP   ·   %3 UDP</source>
         <translation>活动: %1   ·   TCP: %2   ·   UDP: %3</translation>

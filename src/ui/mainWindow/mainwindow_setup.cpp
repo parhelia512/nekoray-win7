@@ -21,7 +21,7 @@
 #include "include/ui/setting/ThemeManager.hpp"
 #include "include/ui/setting/Icon.hpp"
 #include "include/ui/stats/dialog_traffic_stats.h"
-#include "include/ui/stats/dialog_runtime_stats.h"
+#include "include/ui/stats/RuntimeStatsWidget.h"
 #include "include/ui/widget/StartStopButton.hpp"
 
 #include "include/configs/generate.h"
@@ -55,6 +55,7 @@
 #include <QUuid>
 
 #include <QClipboard>
+#include <QScrollArea>
 #include <QScrollBar>
 #include <QDesktopServices>
 #include <QTimer>
@@ -338,7 +339,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     ui->menubar->setVisible(false);
     connect(ui->actionRuntime_Stats, &QAction::triggered, this, [=, this]() {
-        USE_DIALOG(DialogRuntimeStats)
+        ui->stats_widget->setCurrentWidget(ui->runtime_tab);
+        // Selecting a tab in a pane the user has dragged shut would look like the menu did nothing.
+        if (ui->splitter->sizes().value(1) < ui->stats_widget->tabBar()->sizeHint().height()) {
+            const auto height = ui->splitter->size().height();
+            ui->splitter->setSizes({height / 2, height / 2});
+        }
     });
     ui->actionTraffic_Stats->setVisible(!Configs::dataManager->settingsRepo->disable_traffic_aggregation);
     connect(ui->actionTraffic_Stats, &QAction::triggered, this, [=, this]() {
@@ -396,6 +402,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     speedChartWidget = new SpeedWidget(this);
     ui->graph_tab->layout()->addWidget(speedChartWidget);
+
+    runtimeStatsWidget = new RuntimeStatsWidget(this);
+    auto* runtimeScroll = new QScrollArea(this);
+    runtimeScroll->setFrameShape(QFrame::NoFrame);
+    runtimeScroll->setWidgetResizable(true);
+    runtimeScroll->setWidget(runtimeStatsWidget);
+    ui->runtime_tab->layout()->addWidget(runtimeScroll);
 
     profilesTableModel = new ProfilesTableModel(this);
     profilesFilterModel = new ProfilesFilterProxyModel(this);

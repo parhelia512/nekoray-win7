@@ -22,6 +22,7 @@
 #include "include/database/OtpProfilesRepo.h"
 #include "include/database/ProfilesRepo.h"
 #include "include/global/OtpPlaceholder.hpp"
+#include "include/global/RunningProfiles.hpp"
 #include "include/global/VpnCredentialOverride.hpp"
 #include "include/ui/profile/dialog_vpn_auth.h"
 
@@ -329,6 +330,7 @@ void MainWindow::profile_start(int _id) {
         Configs::dataManager->settingsRepo->UpdateStartedId(ent->id);
         // Must land after the stop this start may have run first: that stop clears the map.
         Stats::SetVpnEndpointProfiles(result->vpnEndpointProfiles);
+        Configs::SetRunningProfiles(result->involvedProfiles);
         running = ent;
         if (Configs::dataManager->settingsRepo->spmode_system_proxy) set_system_proxy(true);
 
@@ -484,6 +486,8 @@ void MainWindow::profile_stop(bool crash, bool block, bool manual) {
         }
 
         if (manual) Configs::dataManager->settingsRepo->UpdateStartedId(Configs::NoProfileId);
+        // Cleared here too: a restart prompt armed between this and the UI-thread teardown would have no id to start.
+        Configs::ClearRunningProfiles();
         running = nullptr;
 
         runOnUiThread([=, this, &restartMsgboxTimer, &restartMsgbox] {
@@ -522,6 +526,7 @@ void MainWindow::stop_vpn_challenge_poll() {
     if (m_vpnChallengeTimer != nullptr) m_vpnChallengeTimer->stop();
     reset_vpn_endpoint_tracking();
     Stats::SetVpnEndpointProfiles({});
+    Configs::ClearRunningProfiles();
     if (m_vpnAuthDialog != nullptr) m_vpnAuthDialog->close();
 }
 

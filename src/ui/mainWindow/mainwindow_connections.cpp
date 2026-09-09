@@ -144,10 +144,10 @@ void MainWindow::setupConnectionFilter()
     cornerLayout->addWidget(connectionCloseAllButton);
     ui->stats_widget->setCornerWidget(corner, Qt::TopRightCorner);
 
-    // The corner widget spans the whole tab bar, so it stays put and only greys out away from the connections tab.
-    auto syncEnabled = [=,this] { corner->setEnabled(ui->stats_widget->currentWidget() == ui->connections_tab); };
-    connect(ui->stats_widget, &QTabWidget::currentChanged, this, [syncEnabled](int) { syncEnabled(); });
-    syncEnabled();
+    // Hiding zeroes the corner's reserved width, so the tab bar reclaims the space instead of holding a gap.
+    auto syncCorner = [=,this] { corner->setVisible(ui->stats_widget->currentWidget() == ui->connections_tab); };
+    connect(ui->stats_widget, &QTabWidget::currentChanged, this, [syncCorner](int) { syncCorner(); });
+    syncCorner();
 
     connectionFilterDebounce = new QTimer(this);
     connectionFilterDebounce->setSingleShot(true);

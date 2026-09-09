@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>DialogRuntimeStats</class>
- <widget class="QDialog" name="DialogRuntimeStats">
+ <class>RuntimeStatsWidget</class>
+ <widget class="QWidget" name="RuntimeStatsWidget">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -9,9 +9,6 @@
     <width>600</width>
     <height>470</height>
    </rect>
-  </property>
-  <property name="windowTitle">
-   <string>Runtime Statistics</string>
   </property>
   <layout class="QGridLayout" name="rootGrid">
    <item row="0" column="0" rowspan="3">
@@ -230,112 +227,121 @@
      <property name="title">
       <string>Running Config</string>
      </property>
-     <layout class="QGridLayout" name="formRunning">
-      <item row="3" column="1">
-       <widget class="QLabel" name="vCountry">
-        <property name="text">
-         <string notr="true">—</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="0">
-       <widget class="QLabel" name="labelCountry">
-        <property name="text">
-         <string>Country</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
-       <widget class="QLabel" name="vCfgName">
-        <property name="text">
-         <string notr="true">—</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="labelCfgName">
-        <property name="text">
-         <string>Config</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="2">
-       <widget class="QLabel" name="labelOutIp">
-        <property name="text">
-         <string>Out IP</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="3">
-       <widget class="QLabel" name="vOutIp">
-        <property name="text">
-         <string notr="true">—</string>
-        </property>
-        <property name="textInteractionFlags">
-         <set>Qt::TextInteractionFlag::TextSelectableByMouse</set>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="3">
-       <widget class="QLabel" name="vPing">
-        <property name="text">
-         <string notr="true">—</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="2">
-       <widget class="QLabel" name="labelPing">
-        <property name="text">
-         <string>Ping</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="4" column="0" colspan="2">
-    <widget class="QGroupBox" name="groupEndpoints">
-     <property name="title">
-      <string>VPN Endpoints</string>
-     </property>
-     <layout class="QVBoxLayout" name="endpointsLayout">
-      <property name="spacing">
-       <number>4</number>
-      </property>
+     <layout class="QVBoxLayout" name="runningLayout">
       <item>
-       <widget class="QTableWidget" name="endpointsTable">
-        <property name="frameShape">
-         <enum>QFrame::Shape::NoFrame</enum>
-        </property>
-        <property name="alternatingRowColors">
-         <bool>true</bool>
-        </property>
-        <property name="showGrid">
-         <bool>false</bool>
-        </property>
-        <property name="wordWrap">
-         <bool>false</bool>
-        </property>
-        <column>
-         <property name="text">
-          <string>Endpoint</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>State</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string/>
-         </property>
-        </column>
-       </widget>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="endpointsButtons">
+       <layout class="QGridLayout" name="formRunning">
+        <item row="3" column="1">
+         <widget class="QLabel" name="vCountry">
+          <property name="text">
+           <string notr="true">—</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="labelCountry">
+          <property name="text">
+           <string>Country</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QLabel" name="vCfgName">
+          <property name="text">
+           <string notr="true">—</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="labelCfgName">
+          <property name="text">
+           <string>Config</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="2">
+         <widget class="QLabel" name="labelOutIp">
+          <property name="text">
+           <string>Out IP</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="3">
+         <widget class="QLabel" name="vOutIp">
+          <property name="text">
+           <string notr="true">—</string>
+          </property>
+          <property name="textInteractionFlags">
+           <set>Qt::TextInteractionFlag::TextSelectableByMouse</set>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="3">
+         <widget class="QLabel" name="vPing">
+          <property name="text">
+           <string notr="true">—</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="2">
+         <widget class="QLabel" name="labelPing">
+          <property name="text">
+           <string>Ping</string>
+          </property>
+         </widget>
+        </item>
        </layout>
+      </item>
+      <item>
+       <widget class="QWidget" name="groupEndpoints" native="true">
+        <layout class="QVBoxLayout" name="endpointsLayout">
+         <property name="spacing">
+          <number>4</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QTableWidget" name="endpointsTable">
+           <property name="frameShape">
+            <enum>QFrame::Shape::NoFrame</enum>
+           </property>
+           <property name="alternatingRowColors">
+            <bool>true</bool>
+           </property>
+           <property name="showGrid">
+            <bool>false</bool>
+           </property>
+           <property name="wordWrap">
+            <bool>false</bool>
+           </property>
+           <column>
+            <property name="text">
+             <string>Endpoint</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>State</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string/>
+            </property>
+           </column>
+          </widget>
+         </item>
+        </layout>
+       </widget>
       </item>
      </layout>
     </widget>
