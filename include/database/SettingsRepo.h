@@ -180,6 +180,7 @@ namespace Configs {
         int dns_cache_capacity = 65536;
         bool dns_disable_cache = false;
         bool dns_disable_expire = false;
+        bool dns_persist_cache = false;
         bool dns_reverse_mapping = false;
         bool enable_dns_routing = true;
         bool use_dns_object = false;

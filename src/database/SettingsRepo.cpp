@@ -81,6 +81,7 @@ namespace Configs {
             {"reset_proxy_on_disable_sp", &reset_proxy_on_disable_sp},
             {"dns_disable_cache", &dns_disable_cache},
             {"dns_disable_expire", &dns_disable_expire},
+            {"dns_persist_cache", &dns_persist_cache},
             {"dns_reverse_mapping", &dns_reverse_mapping},
             {"disable_private_range_bypass", &disable_private_range_bypass},
             {"dns_optimistic", &dns_optimistic},
