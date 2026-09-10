@@ -900,10 +900,10 @@ namespace Configs {
         if (type == custom) return false;
 
         auto rule = get_simple_rule_by_type(type);
-        if (!rule) {
+        const bool isNewRule = rule == nullptr;
+        if (isNewRule) {
             for (auto &item : get_simple_rules()) {
                 if (item->type == type) {
-                    Rules.append(item);
                     rule = item;
                     break;
                 }
@@ -911,9 +911,10 @@ namespace Configs {
         }
         if (!rule) return false;
 
-        bool ok = add_simple_rule(raw, rule, type);
-        FilterEmptyRules();
-        return ok;
+        if (!add_simple_rule(raw, rule, type)) return false;
+        // Published only once the value stuck, so a rejected line needs no FilterEmptyRules() sweep to undo it.
+        if (isNewRule) Rules.append(rule);
+        return true;
     }
 
     bool RouteProfile::add_simple_rule(const QString& content, const std::shared_ptr<RouteRule>& rule, ruleType type)

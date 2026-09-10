@@ -8,7 +8,8 @@
 namespace Configs {
     const int INVALID_ID = -99999;
 
-    enum simpleAction{bypass, block, proxy, warpBypass};
+    // Fixed underlying type so headers that only pass it around (mainwindow.h) can forward-declare it.
+    enum simpleAction : int {bypass, block, proxy, warpBypass};
     inline QString simpleActionToString(simpleAction action)
     {
         if (action == bypass) return {"direct"};
@@ -97,6 +98,7 @@ namespace Configs {
 
         QString UpdateSimpleRules(const QString& content, simpleAction action);
 
+        // Adds one "prefix:value" line to the matching simple rule, creating it if the profile has none yet.
         bool AppendSimpleRule(const QString& rawRule, simpleAction action);
 
         void FilterEmptyRules();

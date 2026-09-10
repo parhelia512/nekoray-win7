@@ -54,6 +54,10 @@ namespace Configs_sys {
     class CoreProcess;
 }
 
+namespace Configs {
+    enum simpleAction : int;
+}
+
 class TrayProfileSelector;
 class TrayOtpCodes;
 class TestRunner;
@@ -142,10 +146,14 @@ public:
 
     void RestartCore();
 
-    // Takes a whole poll snapshot in the lister's order; row N is always its Nth entry. UI thread only.
+    // Whole poll snapshot in the lister's order, never a delta. UI thread only.
     void UpdateConnectionList(const QList<Stats::ConnectionMetadata>& connections);
 
     void UpdateDataView(bool force = false);
+
+    void noteRestartNeeded(const QString& reason);
+
+    void clearRestartNeeded();
 
     void refresh_auto_selector_view();
 
@@ -358,7 +366,6 @@ private:
 
     void import_or_handle_deeplink(const QString &text);
 
-    // A pasted url asks whether it is a subscription or a proxy link; everything else is imported as is.
     void import_text(const QString &text);
 
     void refresh_proxy_list_column_size();
@@ -471,7 +478,6 @@ private:
     QHash<QString, QString> m_vpnOtpLastCode;
     QHash<QString, int> m_vpnOtpRejects;
     QSet<QString> m_vpnChallengeAnswering;
-    // Like m_vpnAuthPrompted, these outlive the restart they count; nothing else would end it.
     QHash<int, int> m_vpnAutoRestarts;
     qint64 m_vpnAutoRestartAt = 0;
     // Survives the restart the recovery itself triggers, so a rejected retry cannot loop.
@@ -492,7 +498,9 @@ private:
 
     void onConnectionContextMenu(const QPoint &pos);
 
-    bool addRuleToCurrentRoute(const QString &rawRule, int action, QString *error = nullptr);
+    QString routeRuleAppendBlocker() const;
+
+    bool addRuleToCurrentRoute(const QString &rawRule, Configs::simpleAction action);
 
     void setupConnectionFilter();
 
@@ -504,7 +512,6 @@ private:
 
     void syncConnectionSourceColumn();
 
-    // Rows are rewritten on every poll, so ids are read at click time, never captured.
     void closeConnections(const QStringList &ids);
 
     QStringList listedConnectionIds() const;

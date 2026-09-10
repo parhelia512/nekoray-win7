@@ -66,6 +66,7 @@
 #endif
 #include <QFileDialog>
 #include <QToolButton>
+#include <QTextBrowser>
 #include <include/global/HTTPRequestHelper.hpp>
 #include "include/global/DeviceDetailsHelper.hpp"
 
@@ -144,7 +145,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     UrlScheme_RegisterIfNeeded();
 
-    // migrate old themes
     bool isNum;
     Configs::dataManager->settingsRepo->theme.toInt(&isNum);
     if (isNum) {
@@ -261,12 +261,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     parallelCoreCallPool->setMaxThreadCount(10);
     testRunner = std::make_unique<TestRunner>(this);
-    // The .ui carries Return; numpad Enter is the same gesture.
     ui->menu_start->setShortcuts({QKeySequence(Qt::Key_Return), QKeySequence(Qt::Key_Enter)});
     connect(ui->menu_start, &QAction::triggered, this, [=,this]() { profile_start(); });
     connect(ui->menu_stop, &QAction::triggered, this, [=,this]() { profile_stop(false, false, true); });
     connect(ui->toolButton_startstop, &QAbstractButton::clicked, this, [=,this]() {
-        // The button is disabled while Connecting, so a click is stop-running or start-selected.
         if (running != nullptr) profile_stop(false, false, true);
         else profile_start();
     });
@@ -281,7 +279,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->label_running->installEventFilter(this);
     ui->label_inbound->installEventFilter(this);
     ui->splitter->installEventFilter(this);
-    // Never from a mouse-press filter: off Windows Qt synthesizes the context-menu event after the press, landing it on whatever is under the cursor by then (#1642).
+    // Never from a mouse-press filter: off Windows Qt synthesizes the context-menu event after the press (#1642).
     ui->tabWidget->setContextMenuPolicy(Qt::CustomContextMenu);
     ui->tabWidget->tabBar()->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->tabWidget->tabBar(), &QWidget::customContextMenuRequested, this,
@@ -340,7 +338,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->menubar->setVisible(false);
     connect(ui->actionRuntime_Stats, &QAction::triggered, this, [=, this]() {
         ui->stats_widget->setCurrentWidget(ui->runtime_tab);
-        // Selecting a tab in a pane the user has dragged shut would look like the menu did nothing.
         if (ui->splitter->sizes().value(1) < ui->stats_widget->tabBar()->sizeHint().height()) {
             const auto height = ui->splitter->size().height();
             ui->splitter->setSizes({height / 2, height / 2});
@@ -350,7 +347,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(ui->actionTraffic_Stats, &QAction::triggered, this, [=, this]() {
         USE_DIALOG(DialogTrafficStats)
     });
-    // refresh_auto_selector_view shows and hides this as the selector monitor starts and stops.
     ui->actionAuto_Selector->setVisible(false);
     connect(ui->actionAuto_Selector, &QAction::triggered, this, [=,this]() {
         if (m_autoSelectorDialog == nullptr) {
@@ -1119,6 +1115,19 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     if (!Configs::dataManager->settingsRepo->flag_tray) show();
 
     ui->data_view->setStyleSheet("background: transparent; border: none;");
+
+    ui->data_view->setOpenLinks(false);
+    ui->data_view->setOpenExternalLinks(false);
+    connect(ui->data_view, &QTextBrowser::anchorClicked, this, [this](const QUrl& url) {
+        const auto action = url.toString();
+        if (action == QLatin1String(DataViewHtmlGenerator::RestartActionUrl)) {
+            const int startedID = Configs::dataManager->settingsRepo->started_id;
+            clearRestartNeeded();
+            if (startedID >= 0) profile_start(startedID);
+        } else if (action == QLatin1String(DataViewHtmlGenerator::DismissRestartActionUrl)) {
+            clearRestartNeeded();
+        }
+    });
 }
 
 MainWindow::~MainWindow() {
