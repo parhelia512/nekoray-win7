@@ -11,7 +11,7 @@
    </rect>
   </property>
   <layout class="QGridLayout" name="rootGrid">
-   <item row="0" column="0" rowspan="3">
+   <item row="0" column="0">
     <widget class="QGroupBox" name="groupProcess">
      <property name="title">
       <string>Process</string>
@@ -89,140 +89,33 @@
        </layout>
       </item>
       <item>
-       <widget class="MiniChartWidget" name="cpuChart" native="true"/>
-      </item>
-      <item>
-       <widget class="MiniChartWidget" name="ramChart" native="true"/>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="0" column="1">
-    <widget class="QGroupBox" name="groupNetwork">
-     <property name="title">
-      <string>Network</string>
-     </property>
-     <layout class="QFormLayout" name="formNetwork">
-      <item row="0" column="0">
-       <widget class="QLabel" name="labelConns">
-        <property name="text">
-         <string>Connections</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QLabel" name="vConns">
-        <property name="text">
-         <string notr="true">—</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="labelSpeedProxy">
-        <property name="text">
-         <string>Proxy</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QLabel" name="vSpeedProxy">
-        <property name="text">
-         <string notr="true">—</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="labelSpeedDirect">
-        <property name="text">
-         <string>Direct</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
-       <widget class="QLabel" name="vSpeedDirect">
-        <property name="text">
-         <string notr="true">—</string>
-        </property>
-       </widget>
+       <layout class="QHBoxLayout" name="chartsRow">
+        <item>
+         <widget class="MiniChartWidget" name="cpuChart" native="true">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>100</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="MiniChartWidget" name="ramChart" native="true">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>100</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </widget>
    </item>
-   <item row="1" column="1">
-    <widget class="QGroupBox" name="groupSchedule">
-     <property name="title">
-      <string>Schedule</string>
-     </property>
-     <layout class="QFormLayout" name="formSchedule">
-      <item row="0" column="0">
-       <widget class="QLabel" name="labelSubUpdate">
-        <property name="text">
-         <string>Next sub update</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QLabel" name="vSubUpdate">
-        <property name="text">
-         <string notr="true">—</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="labelRouteUpdate">
-        <property name="text">
-         <string>Next remote route update</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QLabel" name="vRouteUpdate">
-        <property name="text">
-         <string notr="true">—</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="2" column="1">
-    <widget class="QGroupBox" name="groupSystem">
-     <property name="title">
-      <string>System</string>
-     </property>
-     <layout class="QFormLayout" name="formSystem">
-      <item row="0" column="0">
-       <widget class="QLabel" name="labelDbSize">
-        <property name="text">
-         <string>Databases</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QLabel" name="vDbSize">
-        <property name="text">
-         <string notr="true">—</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="labelUptime">
-        <property name="text">
-         <string>Uptime</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QLabel" name="vUptime">
-        <property name="text">
-         <string notr="true">—</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="3" column="0" colspan="2">
+   <item row="1" column="0">
     <widget class="QGroupBox" name="groupRunning">
      <property name="title">
       <string>Running Config</string>
@@ -342,6 +235,228 @@
          </item>
         </layout>
        </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QGroupBox" name="groupNetwork">
+     <property name="title">
+      <string>Network</string>
+     </property>
+     <layout class="QGridLayout" name="formNetwork">
+      <item row="0" column="0">
+       <widget class="QLabel" name="labelConns">
+        <property name="text">
+         <string>Connections</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLabel" name="vConns">
+        <property name="text">
+         <string notr="true">—</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <spacer name="networkGap1">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Policy::Fixed</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>18</width>
+          <height>0</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="0" column="3">
+       <widget class="QLabel" name="labelSpeedProxy">
+        <property name="text">
+         <string>Proxy</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="4">
+       <widget class="QLabel" name="vSpeedProxy">
+        <property name="text">
+         <string notr="true">—</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="5">
+       <spacer name="networkGap2">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Policy::Fixed</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>18</width>
+          <height>0</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="0" column="6">
+       <widget class="QLabel" name="labelSpeedDirect">
+        <property name="text">
+         <string>Direct</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="7">
+       <widget class="QLabel" name="vSpeedDirect">
+        <property name="text">
+         <string notr="true">—</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="8">
+       <spacer name="networkTail">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QGroupBox" name="groupSystem">
+     <property name="title">
+      <string>System</string>
+     </property>
+     <layout class="QGridLayout" name="formSystem">
+      <item row="0" column="0">
+       <widget class="QLabel" name="labelDbSize">
+        <property name="text">
+         <string>Databases</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLabel" name="vDbSize">
+        <property name="text">
+         <string notr="true">—</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <spacer name="systemGap1">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Policy::Fixed</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>18</width>
+          <height>0</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="0" column="3">
+       <widget class="QLabel" name="labelUptime">
+        <property name="text">
+         <string>Uptime</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="4">
+       <widget class="QLabel" name="vUptime">
+        <property name="text">
+         <string notr="true">—</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="5">
+       <spacer name="systemGap2">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Policy::Fixed</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>18</width>
+          <height>0</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="0" column="6">
+       <widget class="QLabel" name="labelSubUpdate">
+        <property name="text">
+         <string>Next sub update</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="7">
+       <widget class="QLabel" name="vSubUpdate">
+        <property name="text">
+         <string notr="true">—</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="8">
+       <spacer name="systemGap3">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Policy::Fixed</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>18</width>
+          <height>0</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="0" column="9">
+       <widget class="QLabel" name="labelRouteUpdate">
+        <property name="text">
+         <string>Next remote route update</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="10">
+       <widget class="QLabel" name="vRouteUpdate">
+        <property name="text">
+         <string notr="true">—</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="11">
+       <spacer name="systemTail">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
+       </spacer>
       </item>
      </layout>
     </widget>

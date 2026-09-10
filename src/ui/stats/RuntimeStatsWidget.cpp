@@ -45,10 +45,8 @@ RuntimeStatsWidget::RuntimeStatsWidget(QWidget* parent) : QWidget(parent), ui(ne
     ui->setupUi(this);
 
     ui->rootGrid->setColumnStretch(0, 1);
-    ui->rootGrid->setColumnStretch(1, 1);
     ui->rootGrid->setRowStretch(0, 1);
     ui->processLayout->setStretch(1, 1);
-    ui->processLayout->setStretch(2, 1);
     // Without this the slack spreads over the label columns too, stranding each value far from its caption.
     ui->formRunning->setColumnStretch(1, 1);
     ui->formRunning->setColumnStretch(3, 1);
