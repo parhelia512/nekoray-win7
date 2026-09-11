@@ -57,6 +57,8 @@ private:
 
     void updateXrayCommons(QString network);
 
+    void updateTlsControlsEnabled();
+
     void setupXrayXHTTPControls();
 
     void updateXrayXHTTPControls();

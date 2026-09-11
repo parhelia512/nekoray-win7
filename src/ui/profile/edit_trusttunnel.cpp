@@ -5,6 +5,7 @@ EditTrustTunnel::EditTrustTunnel(QWidget *parent)
       ui(new Ui::EditTrustTunnel) {
 
     ui->setupUi(this);
+    _quic = ui->quic;
 }
 
 EditTrustTunnel::~EditTrustTunnel() {

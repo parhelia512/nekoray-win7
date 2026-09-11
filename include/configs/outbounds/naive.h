@@ -10,11 +10,14 @@ namespace Configs
         QString username;
         QString password;
         QString congestion_control;
+        QStringList extra_headers;
+        int insecure_concurrency = 0;
         bool quic = false;
         bool uot = false;
         std::shared_ptr<TLS> tls = std::make_shared<TLS>();
 
         naive() {
+            tls->enabled = true;
             tls->utls->supported = false;
         }
 
@@ -23,6 +26,10 @@ namespace Configs
         }
 
         bool MustTLS() override {
+            return true;
+        }
+
+        bool LimitedTLS() override {
             return true;
         }
 

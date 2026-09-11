@@ -37,7 +37,7 @@ namespace Configs {
             tls->ParseFromLink(link);
             tls->enabled = true; // force enable in case scheme is https and no security queryValue is set
         }
-        if (server_port == 0) server_port = 443;
+        if (server_port == 0) server_port = tls->enabled ? 443 : 80;
         return true;
     }
     bool http::ParseFromJson(const QJsonObject& object)

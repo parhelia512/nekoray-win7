@@ -83,7 +83,7 @@ namespace Configs {
                 return false;
             server_port = 0;
         } else {
-            server_port = url.port();
+            server_port = url.port(0);
         }
 
         if (url.hasFragment()) name = url.fragment(QUrl::FullyDecoded);

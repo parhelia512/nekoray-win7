@@ -221,10 +221,9 @@ DialogEditProfile::DialogEditProfile(const QString &_type, int profileOrGroupId,
     });
     emit ui->security->currentTextChanged(ui->security->currentText());
 
-    // Fragment index 2 is Off; the fallback delay only exists in the built-in implementation.
-    connect(ui->fragment, &QComboBox::currentIndexChanged, this, [=,this](int index)
+    connect(ui->fragment, &QComboBox::currentIndexChanged, this, [=,this](int)
     {
-        ui->tls_frag_fall_delay->setEnabled(index != 2);
+        updateTlsControlsEnabled();
     });
 
     connect(ui->multiplex, &QComboBox::currentTextChanged, this, [=,this](const QString &txt) {
@@ -455,6 +454,9 @@ void DialogEditProfile::typeSelected(const QString &newType) {
         auto _innerWidget = new EditTrustTunnel(this);
         innerWidget = _innerWidget;
         innerEditor = _innerWidget;
+        connect(_innerWidget->_quic, &QCheckBox::toggled, _innerWidget, [=,this](bool) {
+            updateTlsControlsEnabled();
+        });
     } else if (type == "anytls") {
         auto _innerWidget = new EditAnyTLS(this);
         innerWidget = _innerWidget;
@@ -574,13 +576,14 @@ void DialogEditProfile::typeSelected(const QString &newType) {
         ui->method->setText(transport->method);
         ui->sni->setText(tls->server_name);
         ui->alpn->setText(tls->alpn.join(","));
-        if (newEnt) {
+        if (!tls->utls->supported || ent->outbound->LimitedTLS()) {
+            ui->utlsFingerprint->setCurrentText("");
+        } else if (newEnt) {
             ui->utlsFingerprint->setCurrentText(Configs::dataManager->settingsRepo->utlsFingerprint);
         } else {
             ui->utlsFingerprint->setCurrentText(tls->utls->fingerPrint);
         }
         ui->fragment->setCurrentIndex(tls->getFragmentState());
-        ui->tls_frag_fall_delay->setEnabled(tls->getFragmentState() != 2);
         ui->tls_frag_fall_delay->setText(tls->fragment_fallback_delay);
         ui->tls_rec_frag->setChecked(tls->record_fragment);
         ui->tls_tricks->setCurrentIndex(tls->getTlsTricksState());
@@ -592,6 +595,7 @@ void DialogEditProfile::typeSelected(const QString &newType) {
         ui->reality_pbk->setText(tls->reality->public_key);
         ui->reality_sid->setText(tls->reality->short_id);
         CACHE.certificate = tls->certificate;
+        updateTlsControlsEnabled();
     } else {
         ui->right_all_w->setVisible(false);
     }
@@ -741,6 +745,30 @@ void DialogEditProfile::typeSelected(const QString &newType) {
         adjustPosition(mainwindow);
         if (isHidden()) show();
     }, this);
+}
+
+void DialogEditProfile::updateTlsControlsEnabled() {
+    if (!ent) return;
+    const bool limited = ent->outbound->LimitedTLS();
+    const auto trustTunnel = qobject_cast<EditTrustTunnel *>(innerWidget);
+    // QUIC dials through qtls, which cannot use a uTLS or Reality config.
+    const bool quic = trustTunnel != nullptr && trustTunnel->_quic->isChecked();
+    const bool utls = !limited && !quic && ent->outbound->GetTLS()->utls->supported;
+    const bool reality = !limited && !quic;
+    // Limited-TLS outbounds only get the dialer-level ("custom") fragment, which has no fallback delay.
+    const bool fragment = !limited || Configs::dataManager->settingsRepo->fragment_implementation == "custom";
+    for (QWidget *w : std::initializer_list<QWidget *>{ui->alpn, ui->label_8, ui->insecure, ui->tls_rec_frag, ui->tls_tricks, ui->tls_tricks_l, ui->label_3}) {
+        w->setEnabled(!limited);
+    }
+    for (QWidget *w : std::initializer_list<QWidget *>{ui->reality_pbk, ui->reality_pbk_l, ui->reality_sid, ui->reality_sid_l}) {
+        w->setEnabled(reality);
+    }
+    ui->utlsFingerprint->setEnabled(utls);
+    ui->label_2->setEnabled(utls);
+    ui->fragment->setEnabled(fragment);
+    ui->fragment_l->setEnabled(fragment);
+    // Fragment index 2 is Off.
+    ui->tls_frag_fall_delay->setEnabled(!limited && ui->fragment->currentIndex() != 2);
 }
 
 void DialogEditProfile::updateXrayCommons(QString network) {

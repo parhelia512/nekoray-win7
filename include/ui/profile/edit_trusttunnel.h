@@ -19,6 +19,8 @@ public:
 
     bool onEnd() override;
 
+    QCheckBox *_quic{};
+
 private:
     Ui::EditTrustTunnel *ui;
     std::shared_ptr<Configs::Profile> ent;
