@@ -238,10 +238,14 @@ static QString overlayStyleSheet(const ThemeTokens &t) {
     return sheet;
 }
 
+static QColor paneBorder(const ThemeTokens &t) {
+    return separate(blendToward(t.onSurface, t.surface, 0.32), t.surface, 1.9);
+}
+
 // windows11 insets the first tab, never opens the selected one into the pane (zero base overlap) and marks it with a 45% fill.
 static QString windows11TabStyleSheet(const QPalette &pal, const ThemeTokens &t) {
     const auto hex = [](const QColor &c) { return c.name(QColor::HexRgb); };
-    const QColor border = separate(blendToward(t.onSurface, t.surface, 0.32), t.surface, 1.9);
+    const QColor border = paneBorder(t);
     const QColor hover = separate(blendToward(t.accent, t.surface, 0.10), t.surface, 1.10);
     QColor selected = selectedFill(pal, t.surface, t.onSurface, t.accent);
     // Readability of onSurface on the chip outranks how far the chip sits from the window.
@@ -265,6 +269,14 @@ static QString windows11TabStyleSheet(const QPalette &pal, const ThemeTokens &t)
         "QTabBar::tab:disabled { color: %6; }\n"
     ).arg(hex(border), hex(t.onSurface), hex(hover), hex(selected), hex(t.accent), hex(t.muted),
           hex(pal.color(QPalette::Active, QPalette::Base)));
+}
+
+// QMacStyle cuts its pane border where its own centred tab bar would be (clipTabBarFrame), so the sheet draws the pane.
+static QString macPaneStyleSheet(const ThemeTokens &t) {
+    return QStringLiteral(
+        "QTabWidget::pane { border: 1px solid %1; border-radius: 6px; }\n"
+        "#profilesTableView, #masterLogBrowser, #connections { border: none; }\n"
+    ).arg(paneBorder(t).name(QColor::HexRgb));
 }
 
 #ifdef Q_OS_MACOS
@@ -317,6 +329,7 @@ void ThemeManager::ApplyTheme(const QString &theme, bool force) {
 
     QString themeSheet;
     bool windows11Tabs = false;
+    bool macosPane = false;
 
     if (enteringCustom) {
         // The whole palette goes on first, or a colour role leaks from Qt or the previous theme.
@@ -333,6 +346,7 @@ void ThemeManager::ApplyTheme(const QString &theme, bool force) {
         const QString styleName = lowerTheme == "system" ? system_style_name : theme;
         qApp->setStyle(styleName);
         windows11Tabs = styleName.compare(QStringLiteral("windows11"), Qt::CaseInsensitive) == 0;
+        macosPane = styleName.compare(QStringLiteral("macos"), Qt::CaseInsensitive) == 0;
     }
 
     // After setStyle(), which reinstalls the style's palette. Setting the sheet last is also
@@ -340,6 +354,7 @@ void ThemeManager::ApplyTheme(const QString &theme, bool force) {
     tokens = resolveTokens(qApp->palette());
     QString sheet = themeSheet + overlayStyleSheet(tokens);
     if (windows11Tabs) sheet += windows11TabStyleSheet(qApp->palette(), tokens);
+    if (macosPane) sheet += macPaneStyleSheet(tokens);
     qApp->setStyleSheet(sheet);
 
     // Every setStyle() above - setStyleSheet() runs one itself whenever it installs or drops the
