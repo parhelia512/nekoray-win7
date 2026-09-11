@@ -249,7 +249,8 @@ static QString windows11TabStyleSheet(const QPalette &pal, const ThemeTokens &t)
         selected = blendToward(selected, t.surface, 0.6);
     }
     return QStringLiteral(
-        "QTabWidget::pane { margin-top: 1px; border: 1px solid %1; border-radius: 4px; }\n"
+        "QTabWidget::pane { margin-top: 1px; border: 1px solid %1; border-radius: 4px; background: %7; }\n"
+        "#profilesTableView, #masterLogBrowser, #connections { border: none; }\n"
         "QTabBar { background: transparent; qproperty-drawBase: 0; }\n"
         "QTabBar::tab {\n"
         "    background: transparent;\n"
@@ -262,7 +263,8 @@ static QString windows11TabStyleSheet(const QPalette &pal, const ThemeTokens &t)
         "QTabBar::tab:hover:!selected { background: %3; }\n"
         "QTabBar::tab:selected { background: %4; color: %2; border: 1px solid %5; }\n"
         "QTabBar::tab:disabled { color: %6; }\n"
-    ).arg(hex(border), hex(t.onSurface), hex(hover), hex(selected), hex(t.accent), hex(t.muted));
+    ).arg(hex(border), hex(t.onSurface), hex(hover), hex(selected), hex(t.accent), hex(t.muted),
+          hex(pal.color(QPalette::Active, QPalette::Base)));
 }
 
 #ifdef Q_OS_MACOS
