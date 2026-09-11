@@ -35,8 +35,6 @@ void MainWindow::changeEvent(QEvent *event) {
     const QEvent::Type type = event->type();
 
     if (type == QEvent::FontChange) {
-        applyLogBrowserFont();
-
         // QStyleSheetStyle caches font metrics and ignores FontChange; toggling the stylesheet repolishes.
         auto refreshStylesheetCache = [](QWidget *w) {
             const QString ss = w->styleSheet();
@@ -53,6 +51,8 @@ void MainWindow::changeEvent(QEvent *event) {
         if (!appSheet.isEmpty()) {
             qApp->setStyleSheet(appSheet);
         }
+        // After the repolish: with no font rule, QStyleSheetStyle resets a setFont() font to the parent's.
+        applyLogBrowserFont();
 
         // Qt skips setFont when unchanged, so bump the point size to force a real FontChange.
         auto forceFontReapply = [](QWidget *w) {

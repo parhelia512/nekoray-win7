@@ -183,6 +183,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 #endif
     connect(themeManager(), &ThemeManager::themeChanged, this, [=,this](const QString& theme){
         setLogHighlighter(themeUsesDarkLog(theme));
+        applyLogBrowserFont();
         scheduleProxyListRefresh();
     });
     MW_show_log = [=,this](const QString &log) {

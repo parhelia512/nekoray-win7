@@ -6,6 +6,12 @@
 #include <QColor>
 #include <QMap>
 
+#ifdef Q_OS_MACOS
+#include <QEvent>
+#include <QFormLayout>
+#include <QWidget>
+#endif
+
 #include <algorithm>
 #include <cmath>
 
@@ -179,10 +185,6 @@ static QColor separate(QColor c, const QColor &surface, double target) {
     return c;
 }
 
-static QColor readableOn(const QColor &bg) {
-    return contrastRatio(Qt::white, bg) >= contrastRatio(Qt::black, bg) ? QColor(Qt::white) : QColor(Qt::black);
-}
-
 static QColor paletteAccent(const QPalette &pal) {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
     return pal.color(QPalette::Active, QPalette::Accent);
@@ -207,56 +209,99 @@ static ThemeTokens resolveTokens(const QPalette &pal) {
     t.surface   = pal.color(QPalette::Active, QPalette::Window);
     t.onSurface = pal.color(QPalette::Active, QPalette::WindowText);
 
-    t.accent       = separate(paletteAccent(pal), t.surface, 3.0);
-    t.onAccent     = readableOn(t.accent);
-    t.selectedFill = selectedFill(pal, t.surface, t.onSurface, t.accent);
-    t.hoverFill    = separate(blendToward(t.accent, t.surface, 0.10), t.surface, 1.10);
-    t.borderSubtle = separate(blendToward(t.onSurface, t.surface, 0.32), t.surface, 1.9);
-    t.muted        = separate(blendToward(t.onSurface, t.surface, 0.62), t.surface, 4.0);
-    t.tag          = separate(QColor(0xFB, 0x72, 0x99), t.surface, 4.0);
-    t.danger       = separate(QColor(0xC6, 0x28, 0x28), t.surface, 4.5);
-    t.success      = separate(QColor(0x2E, 0x7D, 0x32), t.surface, 4.5);
-    t.info         = separate(QColor(0x32, 0x99, 0xFF), t.surface, 4.0);
-
-    // Readability of onSurface on the chip outranks how far the chip sits from the window.
-    for (int i = 0; i < 8 && contrastRatio(t.onSurface, t.selectedFill) < 4.5; ++i) {
-        t.selectedFill = blendToward(t.selectedFill, t.surface, 0.6);
-    }
+    t.accent  = separate(paletteAccent(pal), t.surface, 3.0);
+    t.muted   = separate(blendToward(t.onSurface, t.surface, 0.62), t.surface, 4.0);
+    t.tag     = separate(QColor(0xFB, 0x72, 0x99), t.surface, 4.0);
+    t.danger  = separate(QColor(0xC6, 0x28, 0x28), t.surface, 4.5);
+    t.success = separate(QColor(0x2E, 0x7D, 0x32), t.surface, 4.5);
+    t.info    = separate(QColor(0x32, 0x99, 0xFF), t.surface, 4.0);
     return t;
 }
 
-// Owns the tab chrome for every theme; literal hex only, so no rule here can resolve against
-// the wrong palette or be served stale from QStyleSheetStyle's render-rule cache.
+// Literal hex only, so no rule here can resolve against the wrong palette or be served stale
+// from QStyleSheetStyle's render-rule cache.
 static QString overlayStyleSheet(const ThemeTokens &t) {
     const auto hex = [](const QColor &c) { return c.name(QColor::HexRgb); };
+    QString sheet = QStringLiteral(
+        "*[colorRole=\"muted\"] { color: %1; }\n"
+        "*[colorRole=\"tag\"] { color: %2; }\n"
+        "*[colorRole=\"danger\"] { color: %3; }\n"
+        "*[colorRole=\"success\"] { color: %4; }\n"
+    ).arg(hex(t.muted), hex(t.tag), hex(t.danger), hex(t.success));
+#ifdef Q_OS_MACOS
+    // QMacStyle centres non-document tabs and elides them instead of scrolling.
+    sheet += QStringLiteral(
+        "QTabWidget::tab-bar { alignment: left; }\n"
+        "QTabBar { tabbar-prefer-no-arrows: 0; tabbar-elide-mode: %1; }\n"
+    ).arg(int(Qt::ElideNone));
+#endif
+    return sheet;
+}
+
+// windows11 insets the first tab, never opens the selected one into the pane (zero base overlap) and marks it with a 45% fill.
+static QString windows11TabStyleSheet(const QPalette &pal, const ThemeTokens &t) {
+    const auto hex = [](const QColor &c) { return c.name(QColor::HexRgb); };
+    const QColor border = separate(blendToward(t.onSurface, t.surface, 0.32), t.surface, 1.9);
+    const QColor hover = separate(blendToward(t.accent, t.surface, 0.10), t.surface, 1.10);
+    QColor selected = selectedFill(pal, t.surface, t.onSurface, t.accent);
+    // Readability of onSurface on the chip outranks how far the chip sits from the window.
+    for (int i = 0; i < 8 && contrastRatio(t.onSurface, selected) < 4.5; ++i) {
+        selected = blendToward(selected, t.surface, 0.6);
+    }
     return QStringLiteral(
         "QTabWidget::pane { margin-top: 1px; border: 1px solid %1; border-radius: 4px; }\n"
-        "QTabWidget[documentMode=\"true\"]::pane { border: none; margin-top: 0px; }\n"
-        "QTabWidget[documentMode=\"true\"]::tab-bar { left: 2px; }\n"
         "QTabBar { background: transparent; qproperty-drawBase: 0; }\n"
         "QTabBar::tab {\n"
         "    background: transparent;\n"
         "    color: %2;\n"
         "    border: 1px solid %1;\n"
         "    border-radius: 4px;\n"
-        "    padding: 2px 4px;\n"
+        "    padding: 2px 6px;\n"
         "    margin-right: 1px;\n"
         "}\n"
         "QTabBar::tab:hover:!selected { background: %3; }\n"
         "QTabBar::tab:selected { background: %4; color: %2; border: 1px solid %5; }\n"
         "QTabBar::tab:disabled { color: %6; }\n"
-        "*[colorRole=\"muted\"] { color: %6; }\n"
-        "*[colorRole=\"tag\"] { color: %7; }\n"
-        "*[colorRole=\"danger\"] { color: %8; }\n"
-        "*[colorRole=\"success\"] { color: %9; }\n"
-    ).arg(hex(t.borderSubtle), hex(t.onSurface), hex(t.hoverFill), hex(t.selectedFill),
-          hex(t.accent), hex(t.muted), hex(t.tag), hex(t.danger), hex(t.success));
+    ).arg(hex(border), hex(t.onSurface), hex(hover), hex(selected), hex(t.accent), hex(t.muted));
 }
+
+#ifdef Q_OS_MACOS
+// Rewrites only values equal to QMacStyle's form defaults: centred form, right-aligned labels, fields at size hint.
+class UniformFormLayouts : public QObject {
+public:
+    using QObject::QObject;
+
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override {
+        if (event->type() == QEvent::Polish && watched->isWidgetType()) {
+            if (auto *layout = static_cast<QWidget *>(watched)->layout()) {
+                normalize(qobject_cast<QFormLayout *>(layout));
+                for (auto *form : layout->findChildren<QFormLayout *>()) normalize(form);
+            }
+        }
+        return false;
+    }
+
+private:
+    static void normalize(QFormLayout *form) {
+        if (!form) return;
+        if (form->fieldGrowthPolicy() == QFormLayout::FieldsStayAtSizeHint)
+            form->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
+        if (form->formAlignment() == (Qt::AlignHCenter | Qt::AlignTop))
+            form->setFormAlignment(Qt::AlignLeft | Qt::AlignTop);
+        if (form->labelAlignment() == Qt::AlignRight)
+            form->setLabelAlignment(Qt::AlignLeft);
+    }
+};
+#endif
 
 void ThemeManager::ApplyTheme(const QString &theme, bool force) {
     if (this->system_style_name.isEmpty()) {
         this->system_style_name = qApp->style()->name();
         this->system_palette = qApp->palette();
+#ifdef Q_OS_MACOS
+        qApp->installEventFilter(new UniformFormLayouts(qApp));
+#endif
     }
 
     if (this->current_theme == theme && !force) {
@@ -269,6 +314,7 @@ void ThemeManager::ApplyTheme(const QString &theme, bool force) {
     const bool enteringCustom = palettes.contains(lowerTheme);
 
     QString themeSheet;
+    bool windows11Tabs = false;
 
     if (enteringCustom) {
         // The whole palette goes on first, or a colour role leaks from Qt or the previous theme.
@@ -282,13 +328,16 @@ void ThemeManager::ApplyTheme(const QString &theme, bool force) {
             qApp->setStyleSheet("");
             qApp->setPalette(system_palette);
         }
-        qApp->setStyle(lowerTheme == "system" ? system_style_name : theme);
+        const QString styleName = lowerTheme == "system" ? system_style_name : theme;
+        qApp->setStyle(styleName);
+        windows11Tabs = styleName.compare(QStringLiteral("windows11"), Qt::CaseInsensitive) == 0;
     }
 
     // After setStyle(), which reinstalls the style's palette. Setting the sheet last is also
     // what clears the render-rule cache; a bare setPalette() does not.
     tokens = resolveTokens(qApp->palette());
-    const auto sheet = themeSheet + overlayStyleSheet(tokens);
+    QString sheet = themeSheet + overlayStyleSheet(tokens);
+    if (windows11Tabs) sheet += windows11TabStyleSheet(qApp->palette(), tokens);
     qApp->setStyleSheet(sheet);
 
     // Every setStyle() above - setStyleSheet() runs one itself whenever it installs or drops the
