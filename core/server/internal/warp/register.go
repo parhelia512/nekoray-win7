@@ -1,7 +1,6 @@
 package warp
 
 import (
-	"ThroneCore/internal/wg"
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -50,7 +49,7 @@ func Register(ctx context.Context, tunnelType string, proxy string) (*Identity, 
 	}
 	defer apiClient.Close()
 
-	wgKey, err := wg.GeneratePrivateKey()
+	wgKey, err := GeneratePrivateKey()
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +89,7 @@ func Register(ctx context.Context, tunnelType string, proxy string) (*Identity, 
 	return identity, nil
 }
 
-func fillWireGuard(registered *device, wgKey wg.Key, identity *Identity) error {
+func fillWireGuard(registered *device, wgKey Key, identity *Identity) error {
 	err := fillCommon(registered, identity)
 	if err != nil {
 		return err
