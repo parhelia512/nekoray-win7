@@ -20,27 +20,22 @@ untar() {
         xargs -0 -r -I{} -P "$JOBS" tar xzf {} "$@"
 }
 
-# The installer only stores these, so each variant compresses on its own core instead of in one makensis stream.
-build_payload() {
-    cd "$DEPLOY/$1"
-    7z a -t7z -mx=9 -mf="$2" -bd "$ROOT/payload/$1.7z" -- *
-}
-
 build_installer() {
     local version="${TAG#v}"
     version="${version#V}"
     local parts
     IFS='.' read -r -a parts <<<"${version%%-*}"
-    cd "$ROOT"
-    cp script/windows_installer.nsi .
-    makensis \
-        -DAPP_VERSION="$version" \
-        -DAPP_VERSION_MAJOR="${parts[0]:-0}" \
-        -DAPP_VERSION_MINOR="${parts[1]:-0}" \
-        -DAPP_VERSION_PATCH="${parts[2]:-0}" \
-        -DAPP_VERSION_BUILD="${parts[3]:-0}" \
-        windows_installer.nsi
-    mv ThroneSetup.exe "$DEPLOY/Throne-$TAG-windows-universal-installer.exe"
+    local iscc="${ISCC:-$(command -v iscc.exe || echo '/c/Program Files (x86)/Inno Setup 6/ISCC.exe')}"
+    # ISCC is a native Windows program: stop MSYS from rewriting its /-switches as paths.
+    MSYS_NO_PATHCONV=1 "$iscc" /Q \
+        "/DAppVersion=$version" \
+        "/DAppVersionMajor=${parts[0]:-0}" \
+        "/DAppVersionMinor=${parts[1]:-0}" \
+        "/DAppVersionPatch=${parts[2]:-0}" \
+        "/DAppVersionBuild=${parts[3]:-0}" \
+        "/O$(cygpath -w "$DEPLOY")" \
+        "/FThrone-$TAG-windows-universal-installer" \
+        "$(cygpath -w "$ROOT/script/windows_installer.iss")"
 }
 
 # Hard links give the archive its Throne/ root without moving a dir other tasks still read.
@@ -48,7 +43,12 @@ zip_dir() {
     mkdir -p "$WORK/$2"
     cp -al "$DEPLOY/$1" "$WORK/$2/Throne"
     cd "$WORK/$2"
-    zip -q -r "$DEPLOY/Throne-$TAG-$2.zip" Throne
+    if command -v zip >/dev/null; then
+        zip -q -r "$DEPLOY/Throne-$TAG-$2.zip" Throne
+    else
+        # Windows runners ship 7-Zip but not Info-ZIP.
+        7z a -tzip -mx=5 -bd -bso0 "$DEPLOY/Throne-$TAG-$2.zip" Throne
+    fi
 }
 
 zip_app() {
@@ -83,26 +83,18 @@ run_task() {
     return $rc
 }
 
-export -f build_payload build_installer zip_dir zip_app zip_debug pack_deb pack_rpm run_task
+export -f build_installer zip_dir zip_app zip_debug pack_deb pack_rpm run_task
 
-FINAL=""
 case "$TARGET" in
 windows)
     untar 'windows*' --exclude='*.pdb'
-    rm -rf "$ROOT/payload"
-    mkdir -p "$ROOT/payload"
-    # Nsis7z decodes with 7-Zip 19.00, which predates the ARM64 branch filter.
     TASKS=(
-        "payload-windows-amd64 build_payload windows-amd64 BCJ2"
-        "payload-windowslegacy-amd64 build_payload windowslegacy-amd64 BCJ2"
-        "payload-windows-arm64 build_payload windows-arm64 off"
-        "payload-windowslegacy-386 build_payload windowslegacy-386 BCJ2"
+        "installer build_installer"
         "zip-windows64 zip_dir windows-amd64 windows64"
         "zip-windows-arm64 zip_dir windows-arm64 windows-arm64"
         "zip-windows32 zip_dir windowslegacy-386 windows32"
         "zip-windowslegacy64 zip_dir windowslegacy-amd64 windowslegacy64"
     )
-    FINAL="installer build_installer"
     ;;
 linux-amd64 | linux-arm64)
     arch="${TARGET#linux-}"
@@ -148,9 +140,6 @@ esac
 
 rc=0
 printf '%s\n' "${TASKS[@]}" | xargs -L1 -P "$JOBS" bash -c 'run_task "$@"' _ || rc=$?
-if [[ $rc == 0 && -n $FINAL ]]; then
-    bash -c "run_task $FINAL" || rc=$?
-fi
 
 for log in "$WORK"/logs/*.log; do
     echo "::group::$(basename "$log" .log)"
@@ -159,5 +148,5 @@ for log in "$WORK"/logs/*.log; do
 done
 echo "Pack task durations:"
 sort -rn "$WORK/logs/times"
-rm -rf "$WORK" "$ROOT/payload"
+rm -rf "$WORK"
 exit "$rc"

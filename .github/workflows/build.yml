@@ -329,7 +329,7 @@ jobs:
           compression-level: 0
   pack:
     name: Pack ${{ matrix.target }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     needs:
       - build-cpp
     permissions:
@@ -338,17 +338,21 @@ jobs:
       matrix:
         include:
           - target: windows
+            runner: windows-latest
             artifacts: "windows*"
-            tools: nsis p7zip-full
           - target: linux-amd64
+            runner: ubuntu-latest
             artifacts: "linux-amd64*"
             tools: rpm
           - target: linux-arm64
+            runner: ubuntu-latest
             artifacts: "linux-arm64*"
             tools: rpm
           - target: macos
+            runner: ubuntu-latest
             artifacts: "darwin*"
           - target: debug
+            runner: ubuntu-latest
             artifacts: "*"
       fail-fast: false
     steps:
@@ -363,6 +367,7 @@ jobs:
         if: matrix.tools
         run: sudo apt install ${{ matrix.tools }}
       - name: Pack
+        shell: bash
         run: bash ./script/pack_release.sh ${{ matrix.target }} "${{ github.event.inputs.tag }}"
       - name: Uploading Artifact
         if: matrix.target != 'debug'
