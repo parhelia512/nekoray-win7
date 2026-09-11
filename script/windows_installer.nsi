@@ -20,8 +20,8 @@ OutFile "ThroneSetup.exe"
 ; 1. NEVER ask for UAC on launch
 RequestExecutionLevel user 
 
-SetCompressor /SOLID /FINAL lzma
-SetCompressorDictSize 64
+; The payloads arrive pre-compressed by pack_release.sh; LZMA only covers the installer's own files.
+SetCompressor /FINAL lzma
 
 !include MUI2.nsh
 !include nsDialogs.nsh
@@ -257,28 +257,39 @@ Section "Install"
 
   !insertmacro AbortOnRunningApp "$INSTDIR\Throne.exe"
 
+  ; Nsis7z overwrites without File's retry prompt, so clear the old binaries first and retry while they are locked.
+  RetryDelete:
+  ClearErrors
+  Delete "$INSTDIR\Throne.exe"
+  Delete "$INSTDIR\ThroneCore.exe"
+  ${If} ${Errors}
+    MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION "Throne is still running. Close it, then click Retry." IDRETRY RetryDelete
+    Abort
+  ${EndIf}
+
+  InitPluginsDir
+  SetCompress off
   ${If} ${IsNativeAMD64}
     ${If} ${AtLeastWaaS} 1809
-      File /oname=libcronet.dll "deployment\windows-amd64\libcronet.dll"
-      File /oname=ThroneCore.exe "deployment\windows-amd64\ThroneCore.exe"
-      File /oname=Throne.exe "deployment\windows-amd64\Throne.exe"
-      File /oname=updater.exe "deployment\windows-amd64\updater.exe"
+      File "/oname=$PLUGINSDIR\payload.7z" "payload\windows-amd64.7z"
     ${Else}
-      File /oname=ThroneCore.exe "deployment\windowslegacy-amd64\ThroneCore.exe"
-      File /oname=Throne.exe "deployment\windowslegacy-amd64\Throne.exe"
-      File /oname=updater.exe "deployment\windowslegacy-amd64\updater.exe"
+      File "/oname=$PLUGINSDIR\payload.7z" "payload\windowslegacy-amd64.7z"
     ${EndIf}
   ${ElseIf} ${IsNativeARM64}
-    File /oname=libcronet.dll "deployment\windows-arm64\libcronet.dll"
-    File /oname=ThroneCore.exe "deployment\windows-arm64\ThroneCore.exe"
-    File /oname=Throne.exe "deployment\windows-arm64\Throne.exe"
-    File /oname=updater.exe "deployment\windows-arm64\updater.exe"
+    File "/oname=$PLUGINSDIR\payload.7z" "payload\windows-arm64.7z"
   ${ElseIf} ${IsNativeIA32}
-    File /oname=ThroneCore.exe "deployment\windowslegacy-386\ThroneCore.exe"
-    File /oname=Throne.exe "deployment\windowslegacy-386\Throne.exe"
-    File /oname=updater.exe "deployment\windowslegacy-386\updater.exe"
+    File "/oname=$PLUGINSDIR\payload.7z" "payload\windowslegacy-386.7z"
   ${Else}
     Abort "Unsupported CPU architecture!"
+  ${EndIf}
+  SetCompress auto
+
+  ; makensis on Linux matches the part before :: against the DLL file name case-sensitively.
+  nsis7z::ExtractWithDetails "$PLUGINSDIR\payload.7z" "Installing package %s..."
+  Delete "$PLUGINSDIR\payload.7z"
+  ${IfNot} ${FileExists} "$INSTDIR\Throne.exe"
+  ${OrIfNot} ${FileExists} "$INSTDIR\ThroneCore.exe"
+    Abort "Could not extract Throne's files to $INSTDIR."
   ${EndIf}
 
   CreateShortcut "$DESKTOP\Throne.lnk" "$INSTDIR\Throne.exe"

@@ -3,15 +3,20 @@ set -e
 
 VERSION="$1"
 ARCH="$2"
+SUFFIX=""
+[[ $3 == "systemqt" ]] && SUFFIX="-system-qt"
 
-mkdir -p Throne/DEBIAN
-mkdir -p Throne/opt
-cp -r linux-$ARCH$([[ $3 == "systemqt" ]] && echo "-system-qt") Throne/opt
-mv Throne/opt/linux-$ARCH$([[ $3 == "systemqt" ]] && echo "-system-qt") Throne/opt/Throne
-rm Throne/opt/Throne/Throne.debug
+# Private staging dir so pack_release.sh can build every package concurrently.
+PKG=$(mktemp -d)
+trap 'rm -rf "$PKG"' EXIT
+chmod 0755 "$PKG"
+
+mkdir -p "$PKG/DEBIAN" "$PKG/opt"
+cp -r "linux-$ARCH$SUFFIX" "$PKG/opt/Throne"
+rm -f "$PKG/opt/Throne/Throne.debug"
 
 # basic
-cat >Throne/DEBIAN/control <<-EOF
+cat >"$PKG/DEBIAN/control" <<-EOF
 Package: Throne
 Version: $VERSION
 Architecture: $ARCH
@@ -20,7 +25,7 @@ Depends: desktop-file-utils$([[ $3 == "systemqt" ]] && echo ", libqt6core6, libq
 Description: Qt based cross-platform GUI proxy configuration manager (backend: sing-box)
 EOF
 
-cat >Throne/DEBIAN/postinst <<-EOF
+cat >"$PKG/DEBIAN/postinst" <<-EOF
 cat >/usr/share/applications/Throne.desktop<<-END
 [Desktop Entry]
 Name=Throne
@@ -35,8 +40,8 @@ END
 update-desktop-database
 EOF
 
-sudo chmod 0755 Throne/DEBIAN/postinst
+chmod 0755 "$PKG/DEBIAN/postinst"
 
 # desktop && PATH
 
-sudo dpkg-deb --build Throne
+dpkg-deb --root-owner-group --build "$PKG" "Throne-$VERSION-debian-$ARCH$SUFFIX.deb"

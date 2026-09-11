@@ -327,11 +327,64 @@ jobs:
           name: Throne-${{ github.sha }}-${{ matrix.dest_suffix }}
           path: artifacts.tgz
           compression-level: 0
-  publish:
-    name: Pack & Publish Release
+  pack:
+    name: Pack ${{ matrix.target }}
     runs-on: ubuntu-latest
     needs:
       - build-cpp
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        include:
+          - target: windows
+            artifacts: "windows*"
+            tools: nsis p7zip-full
+          - target: linux-amd64
+            artifacts: "linux-amd64*"
+            tools: rpm
+          - target: linux-arm64
+            artifacts: "linux-arm64*"
+            tools: rpm
+          - target: macos
+            artifacts: "darwin*"
+          - target: debug
+            artifacts: "*"
+      fail-fast: false
+    steps:
+      - name: Checking out sources
+        uses: actions/checkout@v4.3.1
+      - name: Download Artifacts
+        uses: actions/download-artifact@v8.0.1
+        with:
+          pattern: Throne-${{ github.sha }}-${{ matrix.artifacts }}
+          path: download-artifact
+      - name: Install packaging tools
+        if: matrix.tools
+        run: sudo apt install ${{ matrix.tools }}
+      - name: Pack
+        run: bash ./script/pack_release.sh ${{ matrix.target }} "${{ github.event.inputs.tag }}"
+      - name: Uploading Artifact
+        if: matrix.target != 'debug'
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: Pack-${{ github.sha }}-${{ matrix.target }}
+          path: deployment/Throne-*
+          if-no-files-found: error
+          compression-level: 0
+      - name: Uploading Debug Artifact
+        if: matrix.target == 'debug'
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: Debug-${{ github.sha }}
+          path: deployment/debug-symbols.zip
+          if-no-files-found: error
+          compression-level: 0
+  publish:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    needs:
+      - pack
     permissions:
       contents: write
       actions: read
@@ -341,151 +394,19 @@ jobs:
       - name: Download Artifacts
         uses: actions/download-artifact@v8.0.1
         with:
-          path: download-artifact
-      - name: Pack
-        run: |
-          curl -Lo - https://github.com/tcnksm/ghr/releases/download/v0.17.0/ghr_v0.17.0_linux_amd64.tar.gz | tar xzv
-          mv ghr*linux_amd64/ghr .
-          find . -name artifacts.tgz | xargs -n1 tar xzf
-          ####
-          sudo apt install nsis rpm
-          cp ./script/windows_installer.nsi .
-          TAG="${{ github.event.inputs.tag }}"
-          APP_VERSION="${TAG#v}"
-          APP_VERSION="${APP_VERSION#V}"
-          NUM="${TAG#v}"
-          NUM="${NUM#V}"
-          PREFIX="${NUM%%-*}"
-          IFS='.' read -r -a parts <<< "${PREFIX}"
-          APP_VERSION_MAJOR="${parts[0]:-0}"
-          APP_VERSION_MINOR="${parts[1]:-0}"
-          APP_VERSION_PATCH="${parts[2]:-0}"
-          APP_VERSION_BUILD="${parts[3]:-0}"
-
-          makensis \
-            -DAPP_VERSION="${APP_VERSION}" \
-            -DAPP_VERSION_MAJOR="${APP_VERSION_MAJOR}" \
-            -DAPP_VERSION_MINOR="${APP_VERSION_MINOR}" \
-            -DAPP_VERSION_PATCH="${APP_VERSION_PATCH}" \
-            -DAPP_VERSION_BUILD="${APP_VERSION_BUILD}" \
-            windows_installer.nsi
-          cp ThroneSetup.exe deployment/Throne-${{ github.event.inputs.tag }}-windows-universal-installer.exe
-          ####
-          cd deployment
-          mkdir debug
-          ####
-          bash ../script/pack_debian.sh ${{ github.event.inputs.tag }} amd64
-          mv Throne.deb Throne-${{ github.event.inputs.tag }}-debian-amd64.deb
-          rm -rf Throne
-          ####
-          bash ../script/pack_debian.sh ${{ github.event.inputs.tag }} amd64 systemqt
-          mv Throne.deb Throne-${{ github.event.inputs.tag }}-debian-amd64-system-qt.deb
-          rm -rf Throne
-          ####
-          bash ../script/pack_debian.sh ${{ github.event.inputs.tag }} arm64
-          mv Throne.deb Throne-${{ github.event.inputs.tag }}-debian-arm64.deb
-          rm -rf Throne
-          ####
-          bash ../script/pack_debian.sh ${{ github.event.inputs.tag }} arm64 systemqt
-          mv Throne.deb Throne-${{ github.event.inputs.tag }}-debian-arm64-system-qt.deb
-          rm -rf Throne
-          ####
-          bash ../script/pack_rpm.sh ${{ github.event.inputs.tag }} amd64
-          mv Throne.rpm Throne-${{ github.event.inputs.tag }}-fedora-amd64.rpm
-          rm -rf Throne rpmwork
-          ####
-          bash ../script/pack_rpm.sh ${{ github.event.inputs.tag }} amd64 systemqt
-          mv Throne.rpm Throne-${{ github.event.inputs.tag }}-fedora-amd64-system-qt.rpm
-          rm -rf Throne rpmwork
-          ####
-          bash ../script/pack_rpm.sh ${{ github.event.inputs.tag }} arm64
-          mv Throne.rpm Throne-${{ github.event.inputs.tag }}-fedora-arm64.rpm
-          rm -rf Throne rpmwork
-          ####
-          bash ../script/pack_rpm.sh ${{ github.event.inputs.tag }} arm64 systemqt
-          mv Throne.rpm Throne-${{ github.event.inputs.tag }}-fedora-arm64-system-qt.rpm
-          rm -rf Throne rpmwork
-          ####
-          mv linux-amd64 Throne
-          mv Throne/Throne.debug debug/Throne-${{ github.event.inputs.tag }}-linux-amd64.debug
-          zip -9 -r Throne-${{ github.event.inputs.tag }}-linux-amd64.zip Throne
-          rm -rf Throne
-          ####
-          mv linux-arm64 Throne
-          mv Throne/Throne.debug debug/Throne-${{ github.event.inputs.tag }}-linux-arm64.debug
-          zip -9 -r Throne-${{ github.event.inputs.tag }}-linux-arm64.zip Throne
-          rm -rf Throne
-          ####
-          mv windows-amd64 Throne
-          mv Throne/Throne.pdb debug/Throne-${{ github.event.inputs.tag }}-windows-amd64.pdb
-          zip -9 -r Throne-${{ github.event.inputs.tag }}-windows64.zip Throne
-          rm -rf Throne
-          ####
-          mv windows-arm64 Throne
-          mv Throne/Throne.pdb debug/Throne-${{ github.event.inputs.tag }}-windows-arm64.pdb
-          zip -9 -r Throne-${{ github.event.inputs.tag }}-windows-arm64.zip Throne
-          rm -rf Throne
-          ####
-          mv windowslegacy-386 Throne
-          mv Throne/Throne.pdb debug/Throne-${{ github.event.inputs.tag }}-windowslegacy-386.pdb
-          zip -9 -r Throne-${{ github.event.inputs.tag }}-windows32.zip Throne
-          rm -rf Throne
-          ####
-          mv windowslegacy-amd64 Throne
-          mv Throne/Throne.pdb debug/Throne-${{ github.event.inputs.tag }}-windowslegacy-amd64.pdb
-          zip -9 -r Throne-${{ github.event.inputs.tag }}-windowslegacy64.zip Throne
-          rm -rf Throne
-          ####
-          mkdir Throne
-          mv darwin-arm64/Throne.app Throne/Throne.app
-          mv Throne/Throne.app/Contents/MacOS/Throne.dSYM debug/Throne-${{ github.event.inputs.tag }}-macos-arm64.dSYM
-          zip -9 --symlinks -r Throne-${{ github.event.inputs.tag }}-macos-arm64.zip Throne
-          rm -rf darwin-arm64
-          rm -rf Throne
-          ####
-          mkdir Throne
-          mv darwin-amd64/Throne.app Throne/Throne.app
-          mv Throne/Throne.app/Contents/MacOS/Throne.dSYM debug/Throne-${{ github.event.inputs.tag }}-macos-amd64.dSYM
-          zip -9 --symlinks -r Throne-${{ github.event.inputs.tag }}-macos-amd64.zip Throne
-          rm -rf darwin-amd64
-          rm -rf Throne
-          ####
-          mkdir Throne
-          mv darwinlegacy-amd64/Throne.app Throne/Throne.app
-          mv Throne/Throne.app/Contents/MacOS/Throne.dSYM debug/Throne-${{ github.event.inputs.tag }}-macoslegacy-amd64.dSYM
-          zip -9 --symlinks -r Throne-${{ github.event.inputs.tag }}-macoslegacy-amd64.zip Throne
-          rm -rf darwinlegacy-amd64
-          rm -rf Throne
-          ####
-          zip -9 -r debug-symbols.zip debug
-      - name: Uploading Debug Artifact
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: Debug-${{ github.sha }}
-          path: deployment/debug-symbols.zip
-          compression-level: 0
-      - name: Clean Up
-        run: |
-          cd deployment
-          rm -rf windows-amd64
-          rm -rf windows-arm64
-          rm -rf linux-amd64
-          rm -rf linux-amd64-system-qt
-          rm -rf linux-arm64
-          rm -rf linux-arm64-system-qt
-          rm -rf darwin-amd64
-          rm -rf darwin-arm64
-          rm -rf darwinlegacy-amd64
-          rm -rf windowslegacy-amd64
-          rm -rf windowslegacy-386
-          rm -rf *.pdb
-          rm -rf debug*
+          pattern: Pack-${{ github.sha }}-*
+          merge-multiple: true
+          path: deployment
       - name: Uploading Artifact
         uses: actions/upload-artifact@v7.0.1
         with:
           name: Deployment-${{ github.sha }}
           path: deployment
           compression-level: 0
+      - name: Installing ghr
+        run: |
+          curl -Lo - https://github.com/tcnksm/ghr/releases/download/v0.17.0/ghr_v0.17.0_linux_amd64.tar.gz | tar xzv
+          mv ghr*linux_amd64/ghr .
       - name: PreRelease
         if: github.event.inputs.publish == 'p'
         run: |

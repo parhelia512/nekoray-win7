@@ -20,8 +20,9 @@ SRC_DIR="$PWD/linux-$ARCH$SUFFIX"
 DEPENDS=""
 [[ "$VARIANT" == "systemqt" ]] && DEPENDS="Requires: qt6-qtbase qt6-qtbase-gui qt6-qtwayland xcb-util-cursor google-noto-emoji-color-fonts"
 
-WORK="$PWD/rpmwork"
-rm -rf "$WORK"
+# Private work dir so pack_release.sh can build every package concurrently.
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$WORK"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS}
 
 cat >"$WORK/Throne.desktop" <<-EOF
@@ -71,9 +72,11 @@ update-desktop-database &> /dev/null || :
 update-desktop-database &> /dev/null || :
 EOF
 
+# zstd -19 like the .deb files; T0 lets rpm use one worker per core.
 rpmbuild -bb \
   --define "_topdir $WORK" \
+  --define "_binary_payload w19T0.zstdio" \
   --target "$RPM_ARCH" \
   "$WORK/Throne.spec"
 
-mv "$WORK/RPMS/$RPM_ARCH/Throne-${RPM_VERSION}-1.${RPM_ARCH}.rpm" ./Throne.rpm
+mv "$WORK/RPMS/$RPM_ARCH/Throne-${RPM_VERSION}-1.${RPM_ARCH}.rpm" "Throne-$TAG-fedora-$ARCH$SUFFIX.rpm"
