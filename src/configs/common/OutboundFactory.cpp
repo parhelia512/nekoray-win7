@@ -18,6 +18,7 @@
 #include "include/configs/outbounds/snell.h"
 #include "include/configs/outbounds/shadowtls.h"
 #include "include/configs/outbounds/wireguard.h"
+#include "include/configs/outbounds/masque.h"
 #include "include/configs/outbounds/openvpn.h"
 #include "include/configs/outbounds/openconnect.h"
 #include "include/configs/outbounds/tailscale.h"
@@ -49,6 +50,7 @@ namespace Configs
         if (type == "snell") return new snell();
         if (type == "shadowtls") return new shadowtls();
         if (type == "wireguard") return new wireguard();
+        if (type == "masque") return new masque();
         if (type == "openvpn") return new openvpn();
         if (type == "openconnect") return new openconnect();
         if (type == "tailscale") return new tailscale();

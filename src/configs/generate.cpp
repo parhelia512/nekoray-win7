@@ -453,16 +453,60 @@ namespace Configs {
             return usesXrayCore(ent);
         }
 
+        // Accepts host, host:port, [v6] and [v6]:port; a bare IPv6 address has no port.
+        void splitWarpEndpoint(const QString &endpoint, int defaultPort, QString &host, int &port) {
+            const auto ep = endpoint.trimmed();
+            host = ep;
+            port = defaultPort;
+            QString portText;
+            if (ep.startsWith('[')) {
+                const auto close = ep.indexOf(']');
+                if (close < 0) return;
+                host = ep.mid(1, close - 1);
+                if (ep.mid(close + 1).startsWith(':')) portText = ep.mid(close + 2);
+            } else if (ep.count(':') == 1) {
+                const auto sep = ep.lastIndexOf(':');
+                host = ep.left(sep);
+                portText = ep.mid(sep + 1);
+            }
+            if (const auto parsed = portText.toInt(); parsed > 0 && parsed <= 65535) port = parsed;
+        }
+
         std::shared_ptr<Profile> getWarpProfile() {
             const auto &settings = *dataManager->settingsRepo;
             auto warpProfile = std::make_shared<Profile>();
             warpProfile->name = "warp";
             warpProfile->id = warpProfileID;
+
+            if (settings.warp_mode == "masque") {
+                warpProfile->type = "masque";
+                auto outbound = std::make_shared<masque>();
+                outbound->name = "warp";
+                splitWarpEndpoint(settings.warp_masque_ep, 443, outbound->server, outbound->server_port);
+                outbound->private_key = settings.warp_masque_private_key;
+                outbound->peer_public_key = settings.warp_masque_peer_public_key;
+                outbound->address = settings.warp_masque_ifc_addrs;
+                outbound->mtu = 1280;
+                if (!settings.warp_masque_sni.isEmpty()) outbound->tls->server_name = settings.warp_masque_sni;
+                switch (settings.warp_masque_http_mode) {
+                    case 1:
+                        outbound->http_version = 3;
+                        outbound->disable_version_fallback = true;
+                        break;
+                    case 2:
+                        outbound->http_version = 2;
+                        break;
+                    default:
+                        break;
+                }
+                warpProfile->outbound = outbound;
+                return warpProfile;
+            }
+
             warpProfile->type = "wireguard";
             auto outbound = std::make_shared<wireguard>();
             outbound->name = "warp";
-            outbound->server = settings.warp_ep.contains(":") ? SubStrBefore(settings.warp_ep, ":") : settings.warp_ep;
-            outbound->server_port = settings.warp_ep.contains(":") ? SubStrAfter(settings.warp_ep, ":").toInt() : 2408;
+            splitWarpEndpoint(settings.warp_ep, 2408, outbound->server, outbound->server_port);
             outbound->private_key = settings.warp_private_key;
             outbound->address = settings.warp_ifc_addrs;
             auto peer = std::make_shared<Peer>();
@@ -511,11 +555,16 @@ namespace Configs {
             // A verbatim raw profile takes no twins, and an unreachable bridge still starts a tun.
             ctx.l3Bridge = l3BridgeEnabled(ctx) && !(routeChain->isRaw && routeChain->preventModifications);
 
-            if (settings.enable_warp &&
-                (settings.warp_private_key.isEmpty() ||
-                 settings.warp_public_key.isEmpty() ||
-                 settings.warp_ep.isEmpty() ||
-                 settings.warp_ifc_addrs.isEmpty())) {
+            const bool warpMissing = settings.warp_mode == "masque"
+                ? settings.warp_masque_private_key.isEmpty() ||
+                  settings.warp_masque_peer_public_key.isEmpty() ||
+                  settings.warp_masque_ep.isEmpty() ||
+                  settings.warp_masque_ifc_addrs.isEmpty()
+                : settings.warp_private_key.isEmpty() ||
+                  settings.warp_public_key.isEmpty() ||
+                  settings.warp_ep.isEmpty() ||
+                  settings.warp_ifc_addrs.isEmpty();
+            if (settings.enable_warp && warpMissing) {
                 ctx.error = "Warp is enabled but its config has not been generated. Please generate the Warp config first in Routing Settings.";
                 return;
             }

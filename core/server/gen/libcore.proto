@@ -27,6 +27,7 @@ service LibcoreService {
   rpc QueryIPTest(EmptyReq) returns (QueryIPTestResponse);
   //
   rpc GenWgKeyPair(EmptyReq) returns (GenWgKeyPairResponse);
+  rpc WarpRegister(WarpRegisterRequest) returns (WarpRegisterResponse);
 
   rpc InstallDashboard(InstallDashboardRequest) returns (ErrorResp);
   //
@@ -334,6 +335,24 @@ message GenWgKeyPairResponse {
   optional string private_key = 1 [default = ""];
   optional string public_key = 2 [default = ""];
   optional string error = 3 [default = ""];
+}
+
+message WarpRegisterRequest {
+  optional string tunnel_type = 1 [default = ""]; // "wireguard" | "masque"
+  optional string proxy = 2 [default = ""];       // "http://[user:pass@]host:port"; empty = direct
+}
+
+message WarpRegisterResponse {
+  optional string error = 1 [default = ""];
+  optional string device_id = 2 [default = ""];
+  optional string token = 3 [default = ""];
+  optional string license = 4 [default = ""];
+  optional string ipv4 = 5 [default = ""];            // bare address
+  optional string ipv6 = 6 [default = ""];            // bare address
+  optional string private_key = 7 [default = ""];     // wireguard: base64 x25519; masque: base64 SEC1 DER P-256
+  optional string peer_public_key = 8 [default = ""]; // wireguard: base64 x25519; masque: base64 SPKI DER (PEM armor stripped)
+  optional string endpoint = 9 [default = ""];        // host:port (IPv6 bracketed)
+  repeated int32 reserved = 10;                       // wireguard client_id bytes
 }
 
 // One member of a running auto-selector group. Everything the UI needs to

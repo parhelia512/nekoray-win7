@@ -10,6 +10,7 @@
 #include "include/ui/profile/edit_mieru.h"
 #include "include/ui/profile/edit_snell.h"
 #include "include/ui/profile/edit_wireguard.h"
+#include "include/ui/profile/edit_masque.h"
 #include "include/ui/profile/edit_openvpn.h"
 #include "include/ui/profile/edit_openconnect.h"
 #include "include/ui/profile/edit_tailscale.h"
@@ -329,6 +330,7 @@ DialogEditProfile::DialogEditProfile(const QString &_type, int profileOrGroupId,
         LOAD_TYPE("snell")
         LOAD_TYPE("shadowtls")
         LOAD_TYPE("wireguard")
+        LOAD_TYPE("masque")
         LOAD_TYPE("openvpn")
         LOAD_TYPE("openconnect")
         LOAD_TYPE("tailscale")
@@ -475,6 +477,10 @@ void DialogEditProfile::typeSelected(const QString &newType) {
         innerEditor = _innerWidget;
     } else if (type == "wireguard") {
         auto _innerWidget = new EditWireguard(this);
+        innerWidget = _innerWidget;
+        innerEditor = _innerWidget;
+    } else if (type == "masque") {
+        auto _innerWidget = new EditMasque(this);
         innerWidget = _innerWidget;
         innerEditor = _innerWidget;
     } else if (type == "openvpn") {
@@ -754,7 +760,7 @@ void DialogEditProfile::updateTlsControlsEnabled() {
     // QUIC dials through qtls, which cannot use a uTLS or Reality config.
     const bool quic = trustTunnel != nullptr && trustTunnel->_quic->isChecked();
     const bool utls = !limited && !quic && ent->outbound->GetTLS()->utls->supported;
-    const bool reality = !limited && !quic;
+    const bool reality = !limited && !quic && ent->type != "masque";
     // Limited-TLS outbounds only get the dialer-level ("custom") fragment, which has no fallback delay.
     const bool fragment = !limited || Configs::dataManager->settingsRepo->fragment_implementation == "custom";
     for (QWidget *w : std::initializer_list<QWidget *>{ui->alpn, ui->label_8, ui->insecure, ui->tls_rec_frag, ui->tls_tricks, ui->tls_tricks_l, ui->label_3}) {

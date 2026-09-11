@@ -1,17 +1,18 @@
 #pragma once
+#include <QList>
 #include <QString>
+#include <memory>
+
+class QWidget;
 
 namespace Configs_network {
-    const QString warpApiURL = "https://api.cloudflareclient.com/v0a737/reg";
-
-    struct warpConfig {
-        QString privateKey;
-        QString publicKey;
-        QString endpoint;
-        QString ipv4Address;
-        QString ipv6Address;
+    struct WarpIdentity {
+        QString deviceId, token, privateKey, peerPublicKey, endpoint, ipv4, ipv6;
         QList<int> reserved;
     };
 
-    std::shared_ptr<warpConfig> genWarpConfig(QString *error, QString privateKey, QString publicKey);
+    // Blocking (RPC); never call on the UI thread. tunnelType: "wireguard" | "masque".
+    std::shared_ptr<WarpIdentity> RegisterWarp(const QString &tunnelType, QString *error);
+    // Asks once (persisted in settings warp_tos_accepted) whether the user accepts Cloudflare's WARP terms; UI thread only.
+    bool ConfirmWarpTerms(QWidget *parent);
 }

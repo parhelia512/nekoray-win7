@@ -303,6 +303,10 @@ set(PROJECT_SOURCES
         src/ui/profile/edit_wireguard_amnezia.cpp
         include/ui/profile/edit_wireguard_amnezia.ui
 
+        include/ui/profile/edit_masque.h
+        src/ui/profile/edit_masque.cpp
+        include/ui/profile/edit_masque.ui
+
         include/ui/profile/editor_table_utils.h
 
         include/ui/profile/edit_openvpn.h
@@ -455,6 +459,8 @@ set(PROJECT_SOURCES
         src/configs/outbounds/vless.cpp
         src/configs/outbounds/vmess.cpp
         src/configs/outbounds/wireguard.cpp
+        include/configs/outbounds/masque.h
+        src/configs/outbounds/masque.cpp
         include/configs/outbounds/openvpn.h
         src/configs/outbounds/openvpn.cpp
         include/configs/outbounds/openconnect.h

@@ -1,100 +1,72 @@
-#include <QJsonArray>
-#include <QNetworkAccessManager>
-#include <QNetworkProxy>
-#include <QNetworkReply>
-#include <QNetworkRequest>
 #include <include/configs/sub/warp.h>
+#include <include/api/RPC.h>
 #include <include/global/Configs.hpp>
+#include <QMessageBox>
 #include <QObject>
-#include <utility>
-
+#include <QUrl>
 
 namespace Configs_network {
-    std::shared_ptr<warpConfig> genWarpConfig(QString *error, QString privateKey, QString publicKey) {
-        std::shared_ptr<warpConfig> config = std::make_shared<warpConfig>();
-
-        auto OSStr = getOSString();
-        QJsonObject payload = {
-            {"key", publicKey},
-            {"install_id", ""},
-            {"warp_enabled", true},
-            {"tos", QDateTime::currentDateTimeUtc().toString("yyyy-MM-ddTHH:mm:ss.000+00:00")},
-            {"type", OSStr},
-            {"locale", "en_US"},
-        };
-
-        QNetworkRequest request;
-        QNetworkAccessManager accessManager;
-        accessManager.setTransferTimeout(10000);
-        request.setUrl(warpApiURL);
-        if (Configs::dataManager->settingsRepo->net_use_proxy || Configs::dataManager->settingsRepo->spmode_system_proxy) {
-            if (Configs::dataManager->settingsRepo->started_id < 0) {
+    namespace {
+        QString warpProxy(QString *error) {
+            const auto &settings = Configs::dataManager->settingsRepo;
+            if (!settings->net_use_proxy && !settings->spmode_system_proxy) return {};
+            if (settings->started_id < 0) {
                 *error = QObject::tr("Request with proxy but no profile started.");
-                return config;
+                return {};
             }
-            QNetworkProxy p;
-            p.setType(QNetworkProxy::HttpProxy);
-            p.setHostName(Configs::dataManager->settingsRepo->inbound_address == "::" ? "127.0.0.1" : Configs::dataManager->settingsRepo->inbound_address);
-            p.setPort(Configs::dataManager->settingsRepo->inbound_socks_port);
-            if (Configs::dataManager->settingsRepo->inbound_auth) {
-                p.setUser(Configs::dataManager->settingsRepo->inbound_user);
-                p.setPassword(Configs::dataManager->settingsRepo->inbound_pass);
+            QString host = settings->inbound_address == "::" ? "127.0.0.1" : settings->inbound_address;
+            if (host.contains(':')) host = "[" + host + "]";
+            QString credentials;
+            if (settings->inbound_auth) {
+                credentials = QString::fromLatin1(QUrl::toPercentEncoding(settings->inbound_user)) + ":" +
+                              QString::fromLatin1(QUrl::toPercentEncoding(settings->inbound_pass)) + "@";
             }
-            accessManager.setProxy(p);
+            return "http://" + credentials + host + ":" + QString::number(settings->inbound_socks_port);
         }
-        request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
-        request.setHeader(QNetworkRequest::KnownHeaders::UserAgentHeader, "WARP for Android");
-        request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    }
 
-        auto _reply = accessManager.post(request, QJsonObject2QString(payload, true).toUtf8());
-        QEventLoop loop;
-        QObject::connect(_reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-        loop.exec();
+    std::shared_ptr<WarpIdentity> RegisterWarp(const QString &tunnelType, QString *error) {
+        const auto proxy = warpProxy(error);
+        if (!error->isEmpty()) return nullptr;
 
-        if (_reply->error() != QNetworkReply::NoError) {
-            *error = _reply->errorString();
-            return config;
+        bool rpcOK = false;
+        const auto reply = API::defaultClient->WarpRegister(&rpcOK, tunnelType, proxy);
+        if (!rpcOK) {
+            *error = QObject::tr("Failed to reach the core.");
+            return nullptr;
         }
-
-        auto rawResponse = QString::fromUtf8(_reply->readAll());
-        auto jsonResp = QString2QJsonObject(rawResponse)["config"].toObject();
-        if (!jsonResp.contains("peers") || !jsonResp["peers"].isArray() || jsonResp["peers"].toArray().empty()) {
-            *error = "Received invalid response: " + rawResponse;
-            return config;
+        if (const auto coreError = reply.error.value_or(""); !coreError.empty()) {
+            *error = QString::fromStdString(coreError);
+            return nullptr;
         }
 
-        auto reservedByteArray = DecodeB64IfValid(jsonResp["client_id"].toString());
-        for (char byte : reservedByteArray) {
-            config->reserved << static_cast<unsigned char>(byte);
-        }
+        auto identity = std::make_shared<WarpIdentity>();
+        identity->deviceId = QString::fromStdString(reply.device_id.value_or(""));
+        identity->token = QString::fromStdString(reply.token.value_or(""));
+        identity->privateKey = QString::fromStdString(reply.private_key.value_or(""));
+        identity->peerPublicKey = QString::fromStdString(reply.peer_public_key.value_or(""));
+        identity->endpoint = QString::fromStdString(reply.endpoint.value_or(""));
+        identity->ipv4 = QString::fromStdString(reply.ipv4.value_or(""));
+        identity->ipv6 = QString::fromStdString(reply.ipv6.value_or(""));
+        for (const auto byte : reply.reserved) identity->reserved << byte;
+        return identity;
+    }
 
-        auto peerObj = jsonResp["peers"].toArray()[0].toObject();
-        if (peerObj.isEmpty()) {
-            *error = "Received invalid response: " + rawResponse;
-            return config;
-        }
+    bool ConfirmWarpTerms(QWidget *parent) {
+        const auto &settings = Configs::dataManager->settingsRepo;
+        if (settings->warp_tos_accepted) return true;
 
-        config->privateKey = std::move(privateKey);
-        if (auto pubKey = peerObj["public_key"].toString(); !pubKey.isEmpty()) {
-            config->publicKey = pubKey;
-        } else {
-            *error = "Received invalid response: " + rawResponse;
-            return config;
-        }
+        QMessageBox box(QMessageBox::Question, QObject::tr("Cloudflare WARP"),
+                        QObject::tr("Generating a WARP identity registers a new device with Cloudflare.<br><br>"
+                                    "Do you accept the <a href=\"%1\">Cloudflare WARP terms of service</a>?")
+                            .arg(QStringLiteral("https://www.cloudflare.com/application/terms/")),
+                        QMessageBox::Yes | QMessageBox::No, parent);
+        box.setTextFormat(Qt::RichText);
+        box.setTextInteractionFlags(Qt::TextBrowserInteraction);
+        if (box.exec() != QMessageBox::Yes) return false;
 
-        config->endpoint = peerObj["endpoint"].toObject()["host"].toString();
-        if (config->endpoint.isEmpty()) {
-            config->endpoint = "engage.cloudflareclient.com:2408";
-        }
-
-        auto ifcAddrObj = jsonResp["interface"].toObject()["addresses"].toObject();
-        if (ifcAddrObj.isEmpty()) {
-            *error = "Received invalid response: " + rawResponse;
-            return config;
-        }
-        config->ipv4Address = ifcAddrObj["v4"].toString();
-        config->ipv6Address = ifcAddrObj["v6"].toString();
-
-        return config;
+        settings->warp_tos_accepted = true;
+        settings->Save();
+        return true;
     }
 }

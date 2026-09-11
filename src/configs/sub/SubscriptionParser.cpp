@@ -61,6 +61,7 @@ namespace Subscription {
             {"trusttunnel", {"tt://"}, {"trusttunnel"}, {}},
             {"shadowtls", {"shadowtls://"}, {"shadowtls"}, {}},
             {"wireguard", {"wg://", "wireguard://"}, {"wireguard"}, {}},
+            {"masque", {}, {"masque"}, {"masque"}},
             {"ssh", {"ssh://"}, {"ssh"}, {"ssh"}},
             {"naive", {"naive+https://", "naive+quic://"}, {"naive"}, {}},
         };

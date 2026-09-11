@@ -6,6 +6,7 @@
 
 #include <QFile>
 #include <QMessageBox>
+#include <QPointer>
 #include <QShortcut>
 #include <QTimer>
 #include <QToolTip>
@@ -17,7 +18,8 @@
 #include <QGridLayout>
 #include <QFormLayout>
 #include <QDialogButtonBox>
-#include <include/api/RPC.h>
+
+#include <algorithm>
 
 #include "include/configs/generate.h"
 #include "include/configs/sub/warp.h"
@@ -376,45 +378,74 @@ DialogManageRoutes::DialogManageRoutes(QWidget *parent) : QDialog(parent), ui(ne
     });
 
     ui->enable_warp->setChecked(Configs::dataManager->settingsRepo->enable_warp);
+    ui->warp_mode->setCurrentIndex(Configs::dataManager->settingsRepo->warp_mode == "masque" ? 1 : 0);
     ui->warp_private_key->setText(Configs::dataManager->settingsRepo->warp_private_key);
     ui->warp_public_key->setText(Configs::dataManager->settingsRepo->warp_public_key);
     ui->warp_ifc_addrs->setText(Configs::dataManager->settingsRepo->warp_ifc_addrs.join(","));
     ui->warp_ep->setText(Configs::dataManager->settingsRepo->warp_ep);
     ui->warp_reserved->setText(Configs::dataManager->settingsRepo->warp_reserved.join(","));
-    connect(ui->warp_autogen, &QPushButton::clicked, this, [=,this] {
-        auto originalText = ui->warp_autogen->text();
-        ui->warp_autogen->setText("Getting keypair...");
-        bool ok;
-        auto keyPair = API::defaultClient->GenWgKeyPair(&ok);
-        if (!ok) {
-            runOnUiThread([=] {
-               MessageBoxWarning("Failed to get key pair", keyPair.error->c_str());
-            });
-            ui->warp_autogen->setText(originalText);
-            return;
-        }
-        ui->warp_autogen->setText("Generating config...");
-        QString error;
-        auto conf = Configs_network::genWarpConfig(&error, keyPair.private_key->c_str(), keyPair.public_key->c_str());
-        if (!error.isEmpty()) {
-            runOnUiThread([=] {
-                MessageBoxWarning("Failed to generate warp config", error);
-            });
-            ui->warp_autogen->setText(originalText);
-            return;
-        }
-        ui->warp_private_key->setText(conf->privateKey);
-        ui->warp_public_key->setText(conf->publicKey);
-        ui->warp_ep->setText(conf->endpoint);
-        ui->warp_ifc_addrs->setText(conf->ipv4Address + "/32," + conf->ipv6Address + "/128");
-        ui->warp_reserved->setText(QListInt2QListString(conf->reserved).join(","));
-        ui->warp_autogen->setText("Success!");
-        setTimeout([=,this] { ui->warp_autogen->setText(originalText); }, this, 2000);
-    });
+    ui->warp_masque_ep->setText(Configs::dataManager->settingsRepo->warp_masque_ep);
+    ui->warp_masque_private_key->setText(Configs::dataManager->settingsRepo->warp_masque_private_key);
+    ui->warp_masque_peer_public_key->setText(Configs::dataManager->settingsRepo->warp_masque_peer_public_key);
+    ui->warp_masque_ifc_addrs->setText(Configs::dataManager->settingsRepo->warp_masque_ifc_addrs.join(","));
+    ui->warp_masque_sni->setText(Configs::dataManager->settingsRepo->warp_masque_sni);
+    ui->warp_masque_http_mode->setCurrentIndex(std::clamp(Configs::dataManager->settingsRepo->warp_masque_http_mode, 0, 2));
+    auto showWarpMode = [this](int index) {
+        ui->warp_wg_box->setVisible(index == 0);
+        ui->warp_masque_box->setVisible(index == 1);
+    };
+    showWarpMode(ui->warp_mode->currentIndex());
+    connect(ui->warp_mode, &QComboBox::currentIndexChanged, this, showWarpMode);
+    connect(ui->warp_autogen, &QPushButton::clicked, this, &DialogManageRoutes::generate_warp_config);
 
     ADD_ASTERISK(this)
     // Frozen .ui geometry clips this dialog once a translation outgrows it.
     resize(sizeHint().expandedTo(size()).boundedTo(screen()->availableGeometry().size()));
+}
+
+void DialogManageRoutes::generate_warp_config() {
+    if (!Configs_network::ConfirmWarpTerms(this)) return;
+
+    const bool masque = ui->warp_mode->currentIndex() == 1;
+    const auto originalText = ui->warp_autogen->text();
+    ui->warp_autogen->setEnabled(false);
+    ui->warp_autogen->setText(tr("Generating config..."));
+
+    QPointer<DialogManageRoutes> self(this);
+    runOnNewThread([self, masque, originalText] {
+        QString error;
+        const auto conf = Configs_network::RegisterWarp(masque ? "masque" : "wireguard", &error);
+        runOnUiThread([self, masque, originalText, conf, error] {
+            if (self == nullptr) return;
+            auto *dialog = self.data();
+            if (!conf) {
+                dialog->ui->warp_autogen->setText(originalText);
+                dialog->ui->warp_autogen->setEnabled(true);
+                MessageBoxWarning(tr("Failed to generate warp config"), error);
+                return;
+            }
+            QStringList addrs;
+            if (!conf->ipv4.isEmpty()) addrs << conf->ipv4 + "/32";
+            if (!conf->ipv6.isEmpty()) addrs << conf->ipv6 + "/128";
+            if (masque) {
+                dialog->ui->warp_masque_private_key->setText(conf->privateKey);
+                dialog->ui->warp_masque_peer_public_key->setText(conf->peerPublicKey);
+                dialog->ui->warp_masque_ep->setText(conf->endpoint);
+                dialog->ui->warp_masque_ifc_addrs->setText(addrs.join(","));
+            } else {
+                dialog->ui->warp_private_key->setText(conf->privateKey);
+                dialog->ui->warp_public_key->setText(conf->peerPublicKey);
+                dialog->ui->warp_ep->setText(conf->endpoint);
+                dialog->ui->warp_ifc_addrs->setText(addrs.join(","));
+                dialog->ui->warp_reserved->setText(QListInt2QListString(conf->reserved).join(","));
+            }
+            dialog->ui->warp_autogen->setText(tr("Success!"));
+            setTimeout([dialog, originalText] {
+                dialog->ui->warp_autogen->setText(originalText);
+                dialog->ui->warp_autogen->setEnabled(true);
+            }, dialog, 2000);
+        });
+    });
 }
 
 void DialogManageRoutes::updateCurrentRouteProfile(int idx) {
@@ -491,6 +522,13 @@ void DialogManageRoutes::accept() {
     Configs::dataManager->settingsRepo->warp_private_key = ui->warp_private_key->text().trimmed();
     Configs::dataManager->settingsRepo->warp_public_key = ui->warp_public_key->text().trimmed();
     Configs::dataManager->settingsRepo->warp_reserved = SplitAndTrim(ui->warp_reserved->text(), ",", false);
+    Configs::dataManager->settingsRepo->warp_mode = ui->warp_mode->currentIndex() == 1 ? "masque" : "wireguard";
+    Configs::dataManager->settingsRepo->warp_masque_ep = ui->warp_masque_ep->text().trimmed();
+    Configs::dataManager->settingsRepo->warp_masque_private_key = ui->warp_masque_private_key->text().trimmed();
+    Configs::dataManager->settingsRepo->warp_masque_peer_public_key = ui->warp_masque_peer_public_key->text().trimmed();
+    Configs::dataManager->settingsRepo->warp_masque_ifc_addrs = SplitAndTrim(ui->warp_masque_ifc_addrs->text(), ",", false);
+    Configs::dataManager->settingsRepo->warp_masque_sni = ui->warp_masque_sni->text().trimmed();
+    Configs::dataManager->settingsRepo->warp_masque_http_mode = ui->warp_masque_http_mode->currentIndex();
 
     MW_dialog_message(MwMessage::UpdateSettings, {MwArg::Route});
 

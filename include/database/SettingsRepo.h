@@ -252,6 +252,14 @@ namespace Configs {
         QStringList warp_ifc_addrs = {};
         QString warp_ep = "";
         QStringList warp_reserved = {};
+        bool warp_tos_accepted = false;
+        QString warp_mode = "wireguard"; // "wireguard" or "masque"
+        QString warp_masque_private_key = "";
+        QString warp_masque_peer_public_key = "";
+        QString warp_masque_ep = "";
+        QStringList warp_masque_ifc_addrs = {};
+        QString warp_masque_sni = "consumer-masque.cloudflareclient.com";
+        int warp_masque_http_mode = 0; // 0 = HTTP/3 with fallback, 1 = HTTP/3 only, 2 = HTTP/2
 
         // Hijack
         bool enable_dns_server = false;

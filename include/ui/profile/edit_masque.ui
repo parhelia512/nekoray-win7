@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>EditMasque</class>
+ <widget class="QWidget" name="EditMasque">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>460</width>
+    <height>220</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string notr="true">EditMasque</string>
+  </property>
+  <layout class="QHBoxLayout" name="horizontalLayout">
+   <item>
+    <widget class="QWidget" name="widget" native="true">
+     <layout class="QFormLayout" name="formLayout">
+      <item row="0" column="0">
+       <widget class="QLabel" name="private_key_l">
+        <property name="toolTip">
+         <string>Base64 DER of the enrolled ECDSA P-256 key; it signs the TLS client certificate.</string>
+        </property>
+        <property name="text">
+         <string>Private Key</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="private_key"/>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="peer_public_key_l">
+        <property name="toolTip">
+         <string>Base64 DER of the server's public key. When set, it pins the server certificate, even with Allow insecure.</string>
+        </property>
+        <property name="text">
+         <string>Peer Public Key</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="peer_public_key"/>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="address_l">
+        <property name="toolTip">
+         <string>Comma separated list of the tunnel's own addresses, e.g. 172.16.0.2/32,2606:4700::1/128</string>
+        </property>
+        <property name="text">
+         <string>Local Address</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="address"/>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="mtu_l">
+        <property name="text">
+         <string>MTU</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLineEdit" name="mtu">
+        <property name="text">
+         <string notr="true">1280</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="http_version_l">
+        <property name="toolTip">
+         <string>HTTP/3 runs over UDP; HTTP/2 runs over TLS on TCP and works where UDP is blocked.</string>
+        </property>
+        <property name="text">
+         <string>HTTP Version</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QComboBox" name="http_version">
+        <property name="toolTip">
+         <string>HTTP/3 runs over UDP; HTTP/2 runs over TLS on TCP and works where UDP is blocked.</string>
+        </property>
+        <item>
+         <property name="text">
+          <string>HTTP/3 (fallback to HTTP/2)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>HTTP/3 only</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string notr="true">HTTP/2</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="5" column="0" colspan="2">
+       <widget class="QPushButton" name="warp_autogen">
+        <property name="toolTip">
+         <string>Register a new Cloudflare WARP device for MASQUE and fill the key, address and server fields.</string>
+        </property>
+        <property name="text">
+         <string>Generate WARP identity</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <tabstops>
+  <tabstop>private_key</tabstop>
+  <tabstop>peer_public_key</tabstop>
+  <tabstop>address</tabstop>
+  <tabstop>mtu</tabstop>
+  <tabstop>http_version</tabstop>
+  <tabstop>warp_autogen</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>

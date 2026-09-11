@@ -1,4 +1,4 @@
-package wg
+package warp
 
 // Code taken from golang.zx2c4.com\wireguard\wgctrl codebase
 

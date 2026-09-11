@@ -15,6 +15,7 @@
 #include "include/configs/outbounds/socks.h"
 #include "include/configs/outbounds/http.h"
 #include "include/configs/outbounds/hysteria.h"
+#include "include/configs/outbounds/masque.h"
 #include "include/configs/outbounds/shadowsocks.h"
 #include "include/configs/outbounds/ssh.h"
 #include "include/configs/outbounds/trojan.h"
@@ -146,6 +147,10 @@ namespace Configs {
 
         [[nodiscard]] Configs::wireguard *Wireguard() const {
             return dynamic_cast<Configs::wireguard *>(outbound.get());
+        };
+
+        [[nodiscard]] Configs::masque *Masque() const {
+            return dynamic_cast<Configs::masque *>(outbound.get());
         };
 
         [[nodiscard]] Configs::openvpn *OpenVPN() const {

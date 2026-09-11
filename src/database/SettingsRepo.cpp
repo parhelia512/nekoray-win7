@@ -71,6 +71,7 @@ namespace Configs {
             {"log_enable_exclude",            &log_enable_exclude},
             {"log_auto_scroll",               &log_auto_scroll},
             {"enable_warp",                   &enable_warp},
+            {"warp_tos_accepted",             &warp_tos_accepted},
             {"enable_dns_routing",            &enable_dns_routing},
             {"inbound_auth",                  &inbound_auth},
             {"allow_stopping_active_profile", &allow_stopping_active_profile},
@@ -121,6 +122,7 @@ namespace Configs {
             {"dns_cache_capacity", &dns_cache_capacity},
             {"h2_max_concurrent_streams", &h2_max_concurrent_streams},
             {"quic_initial_packet_size", &quic_initial_packet_size},
+            {"warp_masque_http_mode",  &warp_masque_http_mode},
         };
 
         stringMap = {
@@ -184,6 +186,11 @@ namespace Configs {
             {"warp_private_key",           &warp_private_key},
             {"warp_public_key",            &warp_public_key},
             {"warp_ep",                    &warp_ep},
+            {"warp_mode",                  &warp_mode},
+            {"warp_masque_private_key",    &warp_masque_private_key},
+            {"warp_masque_peer_public_key", &warp_masque_peer_public_key},
+            {"warp_masque_ep",             &warp_masque_ep},
+            {"warp_masque_sni",            &warp_masque_sni},
             {"inbound_user",               &inbound_user},
             {"inbound_pass",               &inbound_pass},
             {"url_scheme_mirror",          &url_scheme_mirror},
@@ -205,6 +212,7 @@ namespace Configs {
             {"dial_inet4_bind_history",  &dial_inet4_bind_address_history},
             {"dial_inet6_bind_history",  &dial_inet6_bind_address_history},
             {"warp_reserved", &warp_reserved},
+            {"warp_masque_ifc_addrs", &warp_masque_ifc_addrs},
         };
     }
 

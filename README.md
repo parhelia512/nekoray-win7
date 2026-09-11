@@ -41,6 +41,7 @@ curl -fsSL https://raw.githubusercontent.com/throneproj/Throne/dev/script/instal
 - ShadowTLS
 - Wireguard
 - AmneziaWG
+- MASQUE
 - SSH
 - Xray VLESS
 - Custom Outbound (Both Sing-box and Xray)
