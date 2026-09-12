@@ -9,7 +9,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/pem"
-	"net"
 	"net/http"
 	"time"
 
@@ -23,8 +22,8 @@ const (
 
 const (
 	defaultWireGuardEndpoint = "engage.cloudflareclient.com:2408"
-	defaultMASQUEHost        = "162.159.198.1"
-	masquePort               = "443"
+	// The API hands out 162.159.198.1, which is a plain CDN edge on TCP, so HTTP/2 could never reach MASQUE there.
+	masqueEndpoint = "162.159.198.2:443"
 )
 
 type Identity struct {
@@ -137,13 +136,9 @@ func enrollMASQUE(ctx context.Context, apiClient *client, registered *device, id
 	if err != nil {
 		return err
 	}
-	host := defaultMASQUEHost
-	if endpointHost, _, splitErr := net.SplitHostPort(enrolled.Config.Peers[0].Endpoint.V4); splitErr == nil && endpointHost != "" {
-		host = endpointHost
-	}
 	identity.PrivateKey = base64.StdEncoding.EncodeToString(privateKeyDER)
 	identity.PeerPublicKey = peerPublicKey
-	identity.Endpoint = net.JoinHostPort(host, masquePort)
+	identity.Endpoint = masqueEndpoint
 	return nil
 }
 
