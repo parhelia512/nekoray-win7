@@ -243,7 +243,6 @@ func (d *DnsManager) SetSystemDNS(ifc *control.Interface, clear bool) error {
 		dnsIsSet = false
 		d.restoreSystemDNS(*ifc)
 		return nil
-		return nil
 	} else {
 		dnsIsSet = true
 		d.lastIfc = ifc

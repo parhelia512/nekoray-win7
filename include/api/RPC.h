@@ -26,14 +26,14 @@ namespace API {
 
         libcore::QueryStatsResp QueryStats();
 
-        // coreError (optional): on RPC failure, receives the core's error message.
-        libcore::TestResp Test(bool *rpcOK, const libcore::TestReq &request, QString *coreError = nullptr);
+        // coreError (optional): on RPC failure, receives the core's error message. timeoutMs 0 = the channel default.
+        libcore::TestResp Test(bool *rpcOK, const libcore::TestReq &request, QString *coreError = nullptr, int timeoutMs = 0);
 
         void StopTests(bool *rpcOK);
 
         libcore::QueryURLTestResponse QueryURLTest(bool *rpcOK);
 
-        libcore::IPTestResp IPTest(bool *rpcOK, const libcore::IPTestRequest &request, QString *coreError = nullptr);
+        libcore::IPTestResp IPTest(bool *rpcOK, const libcore::IPTestRequest &request, QString *coreError = nullptr, int timeoutMs = 0);
 
         libcore::QueryIPTestResponse QueryIPTest(bool *rpcOK);
 
@@ -56,7 +56,8 @@ namespace API {
 
         libcore::GenWgKeyPairResponse GenWgKeyPair(bool *rpcOK);
 
-        libcore::WarpRegisterResponse WarpRegister(bool *rpcOK, const QString &tunnelType, const QString &proxy);
+        libcore::WarpRegisterResponse WarpRegister(bool *rpcOK, const QString &tunnelType, const QString &proxy,
+                                                   const QStringList &apiHosts);
 
         QString InstallDashboard(bool *rpcOK, const QString &archivePath, const QString &targetDir) const;
 

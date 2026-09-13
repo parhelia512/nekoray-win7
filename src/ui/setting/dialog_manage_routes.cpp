@@ -17,6 +17,9 @@
 #include <QScreen>
 #include <QGridLayout>
 #include <QFormLayout>
+#include <QVBoxLayout>
+#include <QLabel>
+#include <QRegularExpression>
 #include <QDialogButtonBox>
 
 #include <algorithm>
@@ -28,6 +31,55 @@
 #include <srslist.h>
 #include "include/database/RoutesRepo.h"
 #include "include/ui/setting/RawRouteItem.h"
+
+namespace {
+    constexpr auto defaultWarpApiHost = "api.cloudflareclient.com";
+
+    QStringList normalizeWarpApiHosts(const QString &text) {
+        static const QRegularExpression pathStart("[/?#]");
+        QStringList hosts;
+        for (auto host : text.split('\n')) {
+            host = host.trimmed().toLower();
+            if (host.startsWith("https://")) host.remove(0, 8);
+            else if (host.startsWith("http://")) host.remove(0, 7);
+            if (const auto end = host.indexOf(pathStart); end >= 0) host.truncate(end);
+            if (!host.isEmpty() && !hosts.contains(host)) hosts << host;
+        }
+        return hosts;
+    }
+
+    void editWarpApiHosts(QWidget *parent) {
+        auto w = new QDialog(parent);
+        w->setWindowTitle(DialogManageRoutes::tr("WARP Registration Domains"));
+        w->setWindowModality(Qt::ApplicationModal);
+
+        auto layout = new QVBoxLayout(w);
+
+        auto hint = new QLabel(DialogManageRoutes::tr("One domain per line. They are tried in order and the first one that accepts the registration is used. "
+                                                      "Leave empty to use %1.").arg(defaultWarpApiHost), w);
+        hint->setWordWrap(true);
+        layout->addWidget(hint);
+
+        const auto &saved = Configs::dataManager->settingsRepo->warp_api_hosts;
+        auto tEdit = new QPlainTextEdit(w);
+        tEdit->setPlainText(saved.isEmpty() ? QString(defaultWarpApiHost) : saved.join('\n'));
+        layout->addWidget(tEdit);
+
+        auto buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, w);
+        layout->addWidget(buttons);
+
+        QObject::connect(buttons, &QDialogButtonBox::accepted, w, [=] {
+            Configs::dataManager->settingsRepo->warp_api_hosts = normalizeWarpApiHosts(tEdit->toPlainText());
+            Configs::dataManager->settingsRepo->Save();
+            w->accept();
+        });
+        QObject::connect(buttons, &QDialogButtonBox::rejected, w, &QDialog::reject);
+
+        w->resize(w->sizeHint().boundedTo(parent->screen()->availableGeometry().size()));
+        w->exec();
+        w->deleteLater();
+    }
+}
 
 void DialogManageRoutes::reloadProfileItems() {
     if (chainList.empty()) {
@@ -397,6 +449,7 @@ DialogManageRoutes::DialogManageRoutes(QWidget *parent) : QDialog(parent), ui(ne
     showWarpMode(ui->warp_mode->currentIndex());
     connect(ui->warp_mode, &QComboBox::currentIndexChanged, this, showWarpMode);
     connect(ui->warp_autogen, &QPushButton::clicked, this, &DialogManageRoutes::generate_warp_config);
+    connect(ui->warp_api_hosts_btn, &QPushButton::clicked, this, [this] { editWarpApiHosts(this); });
 
     ADD_ASTERISK(this)
     // Frozen .ui geometry clips this dialog once a translation outgrows it.

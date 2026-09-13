@@ -27,11 +27,11 @@ func BatchURLTest(ctx context.Context, i *boxbox.Box, outboundTags []string, url
 
 	results := runBatch(ctx, i, outboundTags, maxConcurrency, batchProbe[URLTestResult]{
 		run: func(ctx context.Context, tag string, outbound adapter.Outbound) *URLTestResult {
-			client, closeClient := outboundHTTPClient(ctx, outbound, timeout)
+			client, closeClient := outboundHTTPClient(ctx, outbound)
 			defer closeClient()
-			duration, err := urlTest(ctx, client, url)
+			duration, err := urlTest(ctx, client, url, firstRequestTimeout(i, tag, twice, timeout))
 			if err == nil && twice {
-				duration, err = urlTest(ctx, client, url)
+				duration, err = urlTest(ctx, client, url, timeout)
 			}
 			return &URLTestResult{Duration: duration, Tag: tag, Error: err}
 		},
@@ -44,7 +44,9 @@ func BatchURLTest(ctx context.Context, i *boxbox.Box, outboundTags []string, url
 	return results
 }
 
-func urlTest(ctx context.Context, client *http.Client, url string) (time.Duration, error) {
+func urlTest(ctx context.Context, client *http.Client, url string, timeout time.Duration) (time.Duration, error) {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 	begin := time.Now()
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {

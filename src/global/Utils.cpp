@@ -262,12 +262,13 @@ QString DisplayTime(long long time, int formatType) {
 }
 
 QWidget *GetMessageBoxParent() {
-    auto activeWindow = QApplication::activeWindow();
-    if (activeWindow == nullptr && mainwindow != nullptr) {
-        if (mainwindow->isVisible()) return mainwindow;
-        return nullptr;
+    auto parent = QApplication::activeWindow();
+    // A child box dies with its parent box, even while it is still running on the caller's stack.
+    while (qobject_cast<QMessageBox *>(parent) != nullptr) {
+        parent = parent->parentWidget() != nullptr ? parent->parentWidget()->window() : nullptr;
     }
-    return activeWindow;
+    if (parent == nullptr && mainwindow != nullptr && mainwindow->isVisible()) return mainwindow;
+    return parent;
 }
 
 int MessageBoxWarning(const QString &title, const QString &text) {

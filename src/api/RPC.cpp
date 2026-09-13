@@ -295,10 +295,10 @@ namespace API {
         return {};
     }
 
-    libcore::TestResp Client::Test(bool *rpcOK, const libcore::TestReq &request, QString *coreError) {
+    libcore::TestResp Client::Test(bool *rpcOK, const libcore::TestReq &request, QString *coreError, int timeoutMs) {
         libcore::TestResp reply;
         std::vector<uint8_t> resp;
-        auto status = channel->Call("Test", spb::pb::serialize<std::string>(request), resp);
+        auto status = channel->Call("Test", spb::pb::serialize<std::string>(request), resp, timeoutMs);
 
         if (status == LocalSocketChannel::CallOK && tryDeserialize(resp, reply)) {
             *rpcOK = true;
@@ -339,10 +339,10 @@ namespace API {
         }
     }
 
-    libcore::IPTestResp Client::IPTest(bool *rpcOK, const libcore::IPTestRequest &request, QString *coreError) {
+    libcore::IPTestResp Client::IPTest(bool *rpcOK, const libcore::IPTestRequest &request, QString *coreError, int timeoutMs) {
         libcore::IPTestResp reply;
         std::vector<uint8_t> resp;
-        auto status = channel->Call("IPTest", spb::pb::serialize<std::string>(request), resp);
+        auto status = channel->Call("IPTest", spb::pb::serialize<std::string>(request), resp, timeoutMs);
 
         if (status == LocalSocketChannel::CallOK && tryDeserialize(resp, reply)) {
             *rpcOK = true;
@@ -634,14 +634,18 @@ namespace API {
         }
     }
 
-    libcore::WarpRegisterResponse Client::WarpRegister(bool *rpcOK, const QString &tunnelType, const QString &proxy)
+    libcore::WarpRegisterResponse Client::WarpRegister(bool *rpcOK, const QString &tunnelType, const QString &proxy,
+                                                       const QStringList &apiHosts)
     {
         libcore::WarpRegisterRequest request;
         request.tunnel_type = tunnelType.toStdString();
         request.proxy = proxy.toStdString();
+        for (const auto &host : apiHosts) request.api_hosts.push_back(host.toStdString());
         libcore::WarpRegisterResponse reply;
         std::vector<uint8_t> resp;
-        auto status = channel->Call("WarpRegister", spb::pb::serialize<std::string>(request), resp, 60000);
+        // Must outlast the core's per-host budget in server_warp.go.
+        const int timeoutMs = qMax(60000, 30000 + 25000 * static_cast<int>(apiHosts.size()));
+        auto status = channel->Call("WarpRegister", spb::pb::serialize<std::string>(request), resp, timeoutMs);
 
         if (status == LocalSocketChannel::CallOK && tryDeserialize(resp, reply)) {
             *rpcOK = true;

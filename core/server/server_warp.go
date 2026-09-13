@@ -7,12 +7,19 @@ import (
 	"time"
 )
 
-const warpRegisterTimeout = 30 * time.Second
+const (
+	warpRegisterTimeout     = 10 * time.Second
+	warpRegisterHostTimeout = 10 * time.Second
+)
 
 func (s *server) WarpRegister(ctx context.Context, in *gen.WarpRegisterRequest) (*gen.WarpRegisterResponse, error) {
-	ctx, cancel := context.WithTimeout(ctx, warpRegisterTimeout)
+	hosts := len(in.GetApiHosts())
+	if hosts == 0 {
+		hosts = 1
+	}
+	ctx, cancel := context.WithTimeout(ctx, warpRegisterTimeout+time.Duration(hosts)*warpRegisterHostTimeout)
 	defer cancel()
-	identity, err := warp.Register(ctx, in.GetTunnelType(), in.GetProxy())
+	identity, err := warp.Register(ctx, in.GetTunnelType(), in.GetProxy(), in.GetApiHosts())
 	if err != nil {
 		return &gen.WarpRegisterResponse{Error: To(err.Error())}, nil
 	}

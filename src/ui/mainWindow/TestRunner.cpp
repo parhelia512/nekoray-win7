@@ -12,6 +12,7 @@
 #include <QThread>
 #include <QThreadPool>
 
+#include <limits>
 #include <utility>
 
 using namespace API;
@@ -42,6 +43,23 @@ namespace {
     }
 
     constexpr int kVpnStatusWaitMs = 10000;
+
+    // Mirror the core's URLTestTimeout, TunnelStartupTimeout and normalizeConcurrency.
+    constexpr int kCoreDefaultTimeoutMs = 3000;
+    constexpr int kTunnelStartupMs = 10000;
+    constexpr int kCoreMaxConcurrency = 100;
+    constexpr int kRpcSlackMs = 30000;
+
+    // Test/IPTest answer only once the whole batch is done, so the deadline covers its worst case.
+    int batchRpcTimeoutMs(qsizetype tagCount, int requestsPerTag) {
+        const auto& settings = Configs::dataManager->settingsRepo;
+        int concurrency = settings->test_concurrent;
+        if (concurrency <= 0 || concurrency >= 500) concurrency = kCoreMaxConcurrency;
+        const qint64 timeoutMs = settings->url_test_timeout_ms > 0 ? settings->url_test_timeout_ms : kCoreDefaultTimeoutMs;
+        const qint64 rounds = (qMax<qsizetype>(tagCount, 1) + concurrency - 1) / concurrency;
+        const qint64 total = rounds * (requestsPerTag * timeoutMs + kTunnelStartupMs) + kRpcSlackMs;
+        return static_cast<int>(qMin<qint64>(total, std::numeric_limits<int>::max()));
+    }
 
     int resolveEntID(const QMap<QString, int>& tag2entID, const std::string& tag, int fallback) {
         if (tag2entID.isEmpty()) return fallback;
@@ -187,7 +205,7 @@ void TestRunner::runUrlProbe(const Target& target) {
             runOnUiThread([=, this] { mw_->refresh_proxy_list(updated); });
         }, kLatencyPollIntervalMs);
 
-        result = defaultClient->Test(&rpcOK, req, &coreError);
+        result = defaultClient->Test(&rpcOK, req, &coreError, batchRpcTimeoutMs(target.outboundTags.size(), 2));
     }
 
     if (!rpcOK || result.results.empty()) {
@@ -253,7 +271,7 @@ void TestRunner::runIpProbe(const Target& target) {
             runOnUiThread([=, this] { mw_->refresh_proxy_list(updated); });
         }, kLatencyPollIntervalMs);
 
-        result = defaultClient->IPTest(&rpcOK, req, &coreError);
+        result = defaultClient->IPTest(&rpcOK, req, &coreError, batchRpcTimeoutMs(target.outboundTags.size(), 1));
     }
 
     if (!rpcOK || result.results.empty()) {

@@ -665,7 +665,8 @@ func (s *server) QueryURLTest(ctx context.Context, in *gen.EmptyReq) (out *gen.Q
 
 func (s *server) IPTest(ctx context.Context, in *gen.IPTestRequest) (*gen.IPTestResp, error) {
 	// Always builds its own box: there is no test-current variant of an IP test.
-	env, err := prepareTestEnv(false, in.GetNeedXray(), in.GetXrayConfig(),
+	const current = false
+	env, err := prepareTestEnv(current, in.GetNeedXray(), in.GetXrayConfig(),
 		in.XrayFullConfigs, in.GetConfig(), in.OutboundTags, in.GetUseDefaultOutbound(),
 		in.GetXrayOutboundDnsStrategy())
 	if err != nil {
@@ -675,7 +676,7 @@ func (s *server) IPTest(ctx context.Context, in *gen.IPTestRequest) (*gen.IPTest
 
 	timeout := time.Duration(in.GetTestTimeoutMs()) * time.Millisecond
 	results := test_utils.BatchIPTest(test_utils.TestContext(), env.box, env.tags,
-		int(in.GetMaxConcurrency()), timeout)
+		int(in.GetMaxConcurrency()), !current, timeout)
 
 	res := make([]*gen.IPTestRes, 0, len(results))
 	for idx, data := range results {

@@ -38,7 +38,7 @@ type Identity struct {
 	Reserved      []byte
 }
 
-func Register(ctx context.Context, tunnelType string, proxy string) (*Identity, error) {
+func Register(ctx context.Context, tunnelType string, proxy string, apiHosts []string) (*Identity, error) {
 	if tunnelType != TunnelWireGuard && tunnelType != TunnelMASQUE {
 		return nil, E.New("unknown tunnel type: ", tunnelType)
 	}
@@ -57,7 +57,7 @@ func Register(ctx context.Context, tunnelType string, proxy string) (*Identity, 
 	if err != nil {
 		return nil, err
 	}
-	registered, err := apiClient.call(ctx, http.MethodPost, "/reg", "", registerRequest{
+	apiHost, registered, err := apiClient.register(ctx, normalizeHosts(apiHosts), registerRequest{
 		Key:          wgKey.PublicKey().String(),
 		TOS:          time.Now().Format("2006-01-02T15:04:05.000-07:00"),
 		Model:        "PC",
@@ -78,7 +78,7 @@ func Register(ctx context.Context, tunnelType string, proxy string) (*Identity, 
 		License:  registered.Account.License,
 	}
 	if tunnelType == TunnelMASQUE {
-		err = enrollMASQUE(ctx, apiClient, registered, identity)
+		err = enrollMASQUE(ctx, apiClient, apiHost, registered, identity)
 	} else {
 		err = fillWireGuard(registered, wgKey, identity)
 	}
@@ -107,7 +107,7 @@ func fillWireGuard(registered *device, wgKey Key, identity *Identity) error {
 	return nil
 }
 
-func enrollMASQUE(ctx context.Context, apiClient *client, registered *device, identity *Identity) error {
+func enrollMASQUE(ctx context.Context, apiClient *client, apiHost string, registered *device, identity *Identity) error {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return err
@@ -120,7 +120,7 @@ func enrollMASQUE(ctx context.Context, apiClient *client, registered *device, id
 	if err != nil {
 		return err
 	}
-	enrolled, err := apiClient.call(ctx, http.MethodPatch, "/reg/"+registered.ID, registered.Token, updateKeyRequest{
+	enrolled, err := apiClient.call(ctx, apiHost, http.MethodPatch, "/reg/"+registered.ID, registered.Token, updateKeyRequest{
 		Key:        base64.StdEncoding.EncodeToString(publicKeyDER),
 		KeyType:    "secp256r1",
 		TunnelType: TunnelMASQUE,

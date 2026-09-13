@@ -4,19 +4,29 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
+	"net"
 	"net/http"
+	"net/http/httptrace"
 	"net/url"
+	"slices"
 	"strings"
+	"sync/atomic"
+	"time"
 
 	E "github.com/sagernet/sing/common/exceptions"
 )
 
 const (
-	apiBase       = "https://api.cloudflareclient.com/v0a4471"
-	clientVersion = "a-6.35-4471"
-	userAgent     = "WARP for Android"
-	maxBodySize   = 1 << 20
+	defaultAPIHost = "api.cloudflareclient.com"
+	apiVersion     = "v0a4471"
+	clientVersion  = "a-6.35-4471"
+	userAgent      = "WARP for Android"
+	maxBodySize    = 1 << 20
+	dialTimeout    = 10 * time.Second
+	// Some ISPs stall the handshake for 5-10 s before letting it complete.
+	tlsHandshakeTimeout = 10 * time.Second
 )
 
 type registerRequest struct {
@@ -69,6 +79,15 @@ type apiError struct {
 	} `json:"errors"`
 }
 
+type statusError struct {
+	statusCode int
+	message    string
+}
+
+func (e *statusError) Error() string {
+	return e.message
+}
+
 type client struct {
 	httpClient *http.Client
 }
@@ -76,6 +95,8 @@ type client struct {
 func newClient(proxy string) (*client, error) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.Proxy = nil
+	transport.DialContext = (&net.Dialer{Timeout: dialTimeout, KeepAlive: 30 * time.Second}).DialContext
+	transport.TLSHandshakeTimeout = tlsHandshakeTimeout
 	if proxy != "" {
 		proxyURL, err := url.Parse(proxy)
 		if err != nil {
@@ -90,12 +111,36 @@ func (c *client) Close() {
 	c.httpClient.CloseIdleConnections()
 }
 
-func (c *client) call(ctx context.Context, method string, path string, token string, body any) (*device, error) {
+func (c *client) register(ctx context.Context, hosts []string, body registerRequest) (string, *device, error) {
+	var failures []string
+	for _, host := range hosts {
+		var connected atomic.Bool
+		traceCtx := httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
+			GotConn: func(httptrace.GotConnInfo) { connected.Store(true) },
+		})
+		registered, err := c.call(traceCtx, host, http.MethodPost, "/reg", "", body)
+		if err == nil {
+			return host, registered, nil
+		}
+		var urlErr *url.Error
+		if errors.As(err, &urlErr) {
+			err = urlErr.Err
+		}
+		failures = append(failures, host+": "+err.Error())
+		// POST /reg is not idempotent: once a server may have seen it, another host could register a second device.
+		if (connected.Load() && !isRejected(err)) || ctx.Err() != nil {
+			break
+		}
+	}
+	return "", nil, E.New(strings.Join(failures, "; "))
+}
+
+func (c *client) call(ctx context.Context, host string, method string, path string, token string, body any) (*device, error) {
 	content, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
-	request, err := http.NewRequestWithContext(ctx, method, apiBase+path, bytes.NewReader(content))
+	request, err := http.NewRequestWithContext(ctx, method, "https://"+host+"/"+apiVersion+path, bytes.NewReader(content))
 	if err != nil {
 		return nil, err
 	}
@@ -126,8 +171,10 @@ func (c *client) call(ctx context.Context, method string, path string, token str
 }
 
 func responseError(response *http.Response, content []byte) error {
+	err := &statusError{statusCode: response.StatusCode, message: response.Status}
 	if response.StatusCode == http.StatusTooManyRequests {
-		return E.New("rate limited by Cloudflare, try again later")
+		err.message = "rate limited by Cloudflare, try again later"
+		return err
 	}
 	var apiErr apiError
 	if json.Unmarshal(content, &apiErr) == nil {
@@ -138,8 +185,33 @@ func responseError(response *http.Response, content []byte) error {
 			}
 		}
 		if len(messages) > 0 {
-			return E.New(response.Status, ": ", strings.Join(messages, "; "))
+			err.message = response.Status + ": " + strings.Join(messages, "; ")
 		}
 	}
-	return E.New(response.Status)
+	return err
+}
+
+func isRejected(err error) bool {
+	var statusErr *statusError
+	return errors.As(err, &statusErr) && statusErr.statusCode >= 400 && statusErr.statusCode < 500 &&
+		statusErr.statusCode != http.StatusTooManyRequests
+}
+
+func normalizeHosts(hosts []string) []string {
+	var result []string
+	for _, host := range hosts {
+		host = strings.ToLower(strings.TrimSpace(host))
+		host = strings.TrimPrefix(host, "https://")
+		host = strings.TrimPrefix(host, "http://")
+		if index := strings.IndexAny(host, "/?#"); index >= 0 {
+			host = host[:index]
+		}
+		if host != "" && !slices.Contains(result, host) {
+			result = append(result, host)
+		}
+	}
+	if len(result) == 0 {
+		return []string{defaultAPIHost}
+	}
+	return result
 }

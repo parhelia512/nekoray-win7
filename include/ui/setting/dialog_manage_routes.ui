@@ -450,6 +450,16 @@
           </widget>
          </item>
          <item>
+          <widget class="QPushButton" name="warp_api_hosts_btn">
+           <property name="toolTip">
+            <string>Cloudflare API domains to try, in order, when generating a WARP config</string>
+           </property>
+           <property name="text">
+            <string>Registration Domains…</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <spacer name="warp_autogen_spacer">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>

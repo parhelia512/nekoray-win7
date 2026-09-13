@@ -20,6 +20,8 @@ import (
 const FetchServersTimeout = 8 * time.Second
 const MaxConcurrentTests = 100
 
+const TunnelStartupTimeout = 5 * time.Second
+
 // The GUI matches on this text, so the wording is part of the contract.
 var ErrTestAborted = errors.New("test aborted")
 
@@ -222,15 +224,47 @@ func dialerHTTPClient(dial func(ctx context.Context, network, address string) (n
 
 // Dials carry a child of the batch context, not the per-request one, so cancelling the batch tears
 // them down -- and so does the closer, leaving none inside the outbound once the probe returns.
-func outboundHTTPClient(ctx context.Context, outbound adapter.Outbound, timeout time.Duration) (*http.Client, func()) {
+func outboundHTTPClient(ctx context.Context, outbound adapter.Outbound) (*http.Client, func()) {
 	dialCtx, cancelDials := context.WithCancel(ctx)
 	client, closeClient := dialerHTTPClient(func(_ context.Context, network, addr string) (net.Conn, error) {
 		return outbound.DialContext(dialCtx, "tcp", metadata.ParseSocksaddr(addr))
-	}, timeout)
+	}, 0)
 	return client, func() {
 		cancelDials()
 		closeClient()
 	}
+}
+
+// Endpoint membership, not a type assertion: plain outbounds such as direct also satisfy adapter.Endpoint.
+func hasTunnelStartup(i *boxbox.Box, tag string) bool {
+	outbounds := i.Outbound()
+	endpoints := service.FromContext[adapter.EndpointManager](i.Context())
+	visited := make(map[string]bool)
+	pending := []string{tag}
+	for len(pending) > 0 {
+		tag = pending[len(pending)-1]
+		pending = pending[:len(pending)-1]
+		if visited[tag] {
+			continue
+		}
+		visited[tag] = true
+		outbound, found := outbounds.Outbound(tag)
+		if !found {
+			continue
+		}
+		if _, isEndpoint := endpoints.Get(tag); isEndpoint {
+			return true
+		}
+		pending = append(pending, outbound.Dependencies()...)
+	}
+	return false
+}
+
+func firstRequestTimeout(i *boxbox.Box, tag string, cold bool, timeout time.Duration) time.Duration {
+	if cold && hasTunnelStartup(i, tag) {
+		return timeout + TunnelStartupTimeout
+	}
+	return timeout
 }
 
 func getNetDialer(dialer func(ctx context.Context, network string, destination metadata.Socksaddr) (net.Conn, error)) func(ctx context.Context, network string, address string) (net.Conn, error) {

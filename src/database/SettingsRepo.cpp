@@ -213,6 +213,7 @@ namespace Configs {
             {"dial_inet6_bind_history",  &dial_inet6_bind_address_history},
             {"warp_reserved", &warp_reserved},
             {"warp_masque_ifc_addrs", &warp_masque_ifc_addrs},
+            {"warp_api_hosts", &warp_api_hosts},
         };
     }
 
