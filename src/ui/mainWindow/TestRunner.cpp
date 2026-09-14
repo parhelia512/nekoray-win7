@@ -42,11 +42,10 @@ namespace {
         return ent != nullptr && (ent->type == "openvpn" || ent->type == "openconnect");
     }
 
-    constexpr int kVpnStatusWaitMs = 10000;
-
-    // Mirror the core's URLTestTimeout, TunnelStartupTimeout and normalizeConcurrency.
+    // Mirror the core's URLTestTimeout, TunnelStartupTimeout, TunnelHandshakeTimeout and normalizeConcurrency.
     constexpr int kCoreDefaultTimeoutMs = 3000;
-    constexpr int kTunnelStartupMs = 10000;
+    constexpr int kTunnelStartupMs = 5000;
+    constexpr int kTunnelHandshakeMs = 10000;
     constexpr int kCoreMaxConcurrency = 100;
     constexpr int kRpcSlackMs = 30000;
 
@@ -57,7 +56,7 @@ namespace {
         if (concurrency <= 0 || concurrency >= 500) concurrency = kCoreMaxConcurrency;
         const qint64 timeoutMs = settings->url_test_timeout_ms > 0 ? settings->url_test_timeout_ms : kCoreDefaultTimeoutMs;
         const qint64 rounds = (qMax<qsizetype>(tagCount, 1) + concurrency - 1) / concurrency;
-        const qint64 total = rounds * (requestsPerTag * timeoutMs + kTunnelStartupMs) + kRpcSlackMs;
+        const qint64 total = rounds * (kTunnelHandshakeMs + requestsPerTag * timeoutMs + kTunnelStartupMs) + kRpcSlackMs;
         return static_cast<int>(qMin<qint64>(total, std::numeric_limits<int>::max()));
     }
 
@@ -175,7 +174,6 @@ void TestRunner::runUrlProbe(const Target& target) {
             req.vpn_endpoint_tags.push_back(it.key().toStdString());
         }
     }
-    if (!req.vpn_endpoint_tags.empty()) req.vpn_status_timeout_ms = kVpnStatusWaitMs;
 
     bool rpcOK = false;
     QString coreError;

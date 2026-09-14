@@ -98,8 +98,8 @@ message TestReq {
   repeated string xray_full_configs = 10;
   // Inspected inside the same test box: it dies with the RPC, so no later query can.
   repeated string vpn_endpoint_tags = 11;
-  // Bounded wait for those tags to leave `connecting`; 0 picks the core default.
-  optional int32 vpn_status_timeout_ms = 12 [default = 0];
+  reserved 12;
+  reserved "vpn_status_timeout_ms";
   reserved 13;
   reserved "xray_outbound_dns_address";
   // See LoadConfigReq; empty leaves the Xray on the OS resolver, which a running TUN owns.

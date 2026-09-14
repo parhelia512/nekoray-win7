@@ -15,8 +15,6 @@ import (
 	"github.com/sagernet/sing/service"
 )
 
-const defaultVPNStatusTimeout = 10 * time.Second
-
 // Both protocols spell their terminal failure the same way.
 const vpnStateError = adapter.OpenVPNStateError
 

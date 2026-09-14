@@ -22,6 +22,9 @@ const MaxConcurrentTests = 100
 
 const TunnelStartupTimeout = 5 * time.Second
 
+// Bounds the wait for a tunnel that refuses dials until its handshake completes.
+const TunnelHandshakeTimeout = 10 * time.Second
+
 // The GUI matches on this text, so the wording is part of the contract.
 var ErrTestAborted = errors.New("test aborted")
 
@@ -236,11 +239,12 @@ func outboundHTTPClient(ctx context.Context, outbound adapter.Outbound) (*http.C
 }
 
 // Endpoint membership, not a type assertion: plain outbounds such as direct also satisfy adapter.Endpoint.
-func hasTunnelStartup(i *boxbox.Box, tag string) bool {
+func tunnelEndpoints(i *boxbox.Box, tag string) []adapter.Endpoint {
 	outbounds := i.Outbound()
 	endpoints := service.FromContext[adapter.EndpointManager](i.Context())
 	visited := make(map[string]bool)
 	pending := []string{tag}
+	var tunnels []adapter.Endpoint
 	for len(pending) > 0 {
 		tag = pending[len(pending)-1]
 		pending = pending[:len(pending)-1]
@@ -252,17 +256,88 @@ func hasTunnelStartup(i *boxbox.Box, tag string) bool {
 		if !found {
 			continue
 		}
-		if _, isEndpoint := endpoints.Get(tag); isEndpoint {
-			return true
+		if endpoint, isEndpoint := endpoints.Get(tag); isEndpoint {
+			tunnels = append(tunnels, endpoint)
 		}
 		pending = append(pending, outbound.Dependencies()...)
 	}
-	return false
+	return tunnels
+}
+
+type tunnelHandshake struct {
+	updated  func() <-chan struct{}
+	snapshot func() (state string, failure string)
+}
+
+// OpenVPN and OpenConnect refuse dials until their handshake completes; other tunnels hold them instead.
+func handshakeOf(endpoint adapter.Endpoint) *tunnelHandshake {
+	switch typed := endpoint.(type) {
+	case adapter.OpenVPNEndpoint:
+		return &tunnelHandshake{
+			updated: typed.StatusUpdated,
+			snapshot: func() (string, string) {
+				status := typed.OpenVPNStatus()
+				return status.State, status.Error
+			},
+		}
+	case adapter.OpenConnectEndpoint:
+		return &tunnelHandshake{
+			updated: typed.StatusUpdated,
+			snapshot: func() (string, string) {
+				status := typed.OpenConnectStatus()
+				return status.State, status.Error
+			},
+		}
+	}
+	return nil
+}
+
+// Both protocols spell their states the same way.
+func (h *tunnelHandshake) await(ctx context.Context) error {
+	for {
+		// Subscribed before the snapshot, so a change in between still wakes us.
+		updated := h.updated()
+		state, failure := h.snapshot()
+		switch state {
+		case adapter.OpenVPNStateConnected:
+			return nil
+		case adapter.OpenVPNStateError:
+			return errors.New(failure)
+		case adapter.OpenVPNStateAuthPending:
+			return errors.New("waiting for authentication")
+		}
+		select {
+		case <-updated:
+		case <-ctx.Done():
+			return fmt.Errorf("handshake: %w", ctx.Err())
+		}
+	}
+}
+
+func awaitTunnels(ctx context.Context, i *boxbox.Box, tag string) error {
+	ctx, cancel := context.WithTimeout(ctx, TunnelHandshakeTimeout)
+	defer cancel()
+	for _, endpoint := range tunnelEndpoints(i, tag) {
+		handshake := handshakeOf(endpoint)
+		if handshake == nil {
+			continue
+		}
+		if err := handshake.await(ctx); err != nil {
+			return fmt.Errorf("%s: %w", endpoint.Type(), err)
+		}
+	}
+	return nil
 }
 
 func firstRequestTimeout(i *boxbox.Box, tag string, cold bool, timeout time.Duration) time.Duration {
-	if cold && hasTunnelStartup(i, tag) {
-		return timeout + TunnelStartupTimeout
+	if !cold {
+		return timeout
+	}
+	for _, endpoint := range tunnelEndpoints(i, tag) {
+		// An awaited tunnel is already up; only the others can still be holding the first dial.
+		if handshakeOf(endpoint) == nil {
+			return timeout + TunnelStartupTimeout
+		}
 	}
 	return timeout
 }
