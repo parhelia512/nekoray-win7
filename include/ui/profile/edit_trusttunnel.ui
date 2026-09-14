@@ -22,6 +22,23 @@
     </widget>
    </item>
    <item row="2" column="0">
+    <widget class="QLabel" name="label_4">
+     <property name="text">
+      <string>Client Random</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="QLineEdit" name="client_random">
+     <property name="toolTip">
+      <string>TLS ClientHello random prefix required by the server's client_random_prefix rule; not compatible with ECH or REALITY</string>
+     </property>
+     <property name="placeholderText">
+      <string>prefix[/mask] (hex), e.g. a0b0/f0f0</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
     <widget class="QCheckBox" name="health_check">
      <property name="text">
       <string>Health Check</string>
@@ -41,7 +58,7 @@
      </property>
     </widget>
    </item>
-   <item row="4" column="1">
+   <item row="5" column="1">
     <widget class="QComboBox" name="congestion_control">
      <item>
       <property name="text">
@@ -75,14 +92,14 @@
      </item>
     </widget>
    </item>
-   <item row="4" column="0">
+   <item row="5" column="0">
     <widget class="QLabel" name="label_3">
      <property name="text">
       <string>Congestion Control</string>
      </property>
     </widget>
    </item>
-   <item row="3" column="0">
+   <item row="4" column="0">
     <widget class="QCheckBox" name="quic">
      <property name="text">
       <string>QUIC</string>
@@ -94,6 +111,7 @@
  <tabstops>
   <tabstop>username</tabstop>
   <tabstop>password</tabstop>
+  <tabstop>client_random</tabstop>
   <tabstop>health_check</tabstop>
   <tabstop>quic</tabstop>
   <tabstop>congestion_control</tabstop>
