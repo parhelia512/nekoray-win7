@@ -69,25 +69,35 @@ DialogBasicSettings::DialogBasicSettings(QWidget *parent)
     D_LOAD_STRING(inbound_pass)
 
     ui->url_scheme_auto_register->setChecked(Configs::dataManager->settingsRepo->url_scheme_auto_register);
-    connect(ui->url_scheme_install, &QPushButton::clicked, this, [=,this] {
-        const bool ok = UrlScheme_Install();
-        refreshUrlSchemeStatus();
-        if (!ok) QMessageBox::warning(this, tr("URL Scheme"), tr("Could not register the handler for throne:// links."));
-    });
-    connect(ui->url_scheme_uninstall, &QPushButton::clicked, this, [=,this] {
-        UrlScheme_Uninstall();
-        // Leaving auto registration on would put everything back on the next start.
-        ui->url_scheme_auto_register->setChecked(false);
-        Configs::dataManager->settingsRepo->url_scheme_auto_register = false;
-        Configs::dataManager->settingsRepo->Save();
-        refreshUrlSchemeStatus();
-    });
+    ui->file_assoc_auto_register->setChecked(Configs::dataManager->settingsRepo->file_assoc_auto_register);
+    const auto connectAssociation = [this](Association a, QCheckBox *autoRegister, QPushButton *install, QPushButton *uninstall, const QString &failure) {
+        connect(install, &QPushButton::clicked, this, [=,this] {
+            const bool ok = UrlScheme_Install(a);
+            refreshUrlSchemeStatus();
+            if (!ok) QMessageBox::warning(this, ui->url_scheme_box->title(), failure);
+        });
+        connect(uninstall, &QPushButton::clicked, this, [=,this] {
+            UrlScheme_Uninstall(a);
+            autoRegister->setChecked(false);
+            refreshUrlSchemeStatus();
+        });
+    };
+    connectAssociation(Association::Links, ui->url_scheme_auto_register, ui->url_scheme_install, ui->url_scheme_uninstall,
+                       tr("Could not register the handler for throne:// links."));
+    connectAssociation(Association::ConfigFiles, ui->file_assoc_auto_register, ui->file_assoc_install, ui->file_assoc_uninstall,
+                       tr("Could not register the config file associations."));
 #ifdef Q_OS_MACOS
     // LaunchServices registers the scheme from the bundle's Info.plist, so there is nothing of ours to add or take back.
     ui->url_scheme_install->hide();
     ui->url_scheme_uninstall->hide();
 #endif
-    ui->url_scheme_box->setEnabled(UrlScheme_IsSupported());
+    if (!UrlScheme_IsSupported(Association::ConfigFiles)) {
+        ui->file_assoc_auto_register->hide();
+        ui->file_assoc_status->hide();
+        ui->file_assoc_install->hide();
+        ui->file_assoc_uninstall->hide();
+    }
+    ui->url_scheme_box->setEnabled(UrlScheme_IsSupported(Association::Links));
     refreshUrlSchemeStatus();
 
     connect(ui->custom_inbound_edit, &QPushButton::clicked, this, [=,this] {
@@ -330,15 +340,18 @@ static void highlightRegexLines(QTextEdit *edit) {
 
 void DialogBasicSettings::refreshUrlSchemeStatus() {
     const auto &tk = themeManager()->tokens;
-    if (!UrlScheme_IsSupported()) {
-        ui->url_scheme_status->setText(tr("Not available for this installation"));
-        ui->url_scheme_status->setStyleSheet(QStringLiteral("color: %1;").arg(tk.muted.name()));
-        return;
-    }
-
-    const bool installed = UrlScheme_IsCurrent();
-    ui->url_scheme_status->setText(installed ? tr("Installed") : tr("Not installed"));
-    ui->url_scheme_status->setStyleSheet(QStringLiteral("color: %1;").arg((installed ? tk.success : tk.muted).name()));
+    const auto show = [&](QLabel *status, Association a) {
+        if (!UrlScheme_IsSupported(a)) {
+            status->setText(tr("Not available for this installation"));
+            status->setStyleSheet(QStringLiteral("color: %1;").arg(tk.muted.name()));
+            return;
+        }
+        const bool installed = UrlScheme_IsCurrent(a);
+        status->setText(installed ? tr("Installed") : tr("Not installed"));
+        status->setStyleSheet(QStringLiteral("color: %1;").arg((installed ? tk.success : tk.muted).name()));
+    };
+    show(ui->url_scheme_status, Association::Links);
+    show(ui->file_assoc_status, Association::ConfigFiles);
 }
 
 void DialogBasicSettings::applyRegexHighlighting() {
@@ -373,9 +386,12 @@ void DialogBasicSettings::accept() {
     D_SAVE_STRING(inbound_user)
     D_SAVE_STRING(inbound_pass)
 
-    const bool urlSchemeWasAuto = Configs::dataManager->settingsRepo->url_scheme_auto_register;
+    const bool registrationTurnedOn =
+        (!Configs::dataManager->settingsRepo->url_scheme_auto_register && ui->url_scheme_auto_register->isChecked()) ||
+        (!Configs::dataManager->settingsRepo->file_assoc_auto_register && ui->file_assoc_auto_register->isChecked());
     Configs::dataManager->settingsRepo->url_scheme_auto_register = ui->url_scheme_auto_register->isChecked();
-    if (!urlSchemeWasAuto && Configs::dataManager->settingsRepo->url_scheme_auto_register) UrlScheme_RegisterIfNeeded();
+    Configs::dataManager->settingsRepo->file_assoc_auto_register = ui->file_assoc_auto_register->isChecked();
+    if (registrationTurnedOn) UrlScheme_RegisterIfNeeded();
 
     auto oldMaxLogLines = Configs::dataManager->settingsRepo->max_log_line;
     Configs::dataManager->settingsRepo->max_log_line = ui->max_log_line->text().trimmed().toInt();

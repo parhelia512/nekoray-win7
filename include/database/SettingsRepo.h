@@ -2,6 +2,7 @@
 
 #include "Database.h"
 #include "include/global/Const.hpp"
+#include "include/sys/UrlScheme.hpp"
 #include <QMutexLocker>
 #include <QJsonObject>
 #include <QMap>
@@ -134,9 +135,11 @@ namespace Configs {
         // -1 until a filter column has been used.
         int last_filter_column = -1;
 
-        // Mirror of the throne:// registration we last wrote to the OS; startup re-registers only when it differs.
+        // Mirrors of the registrations we last wrote to the OS; startup re-registers only when they differ.
         QString url_scheme_mirror = "";
-        bool url_scheme_auto_register = true;
+        bool url_scheme_auto_register = UrlScheme_AutoRegisterByDefault();
+        QString file_assoc_mirror = "";
+        bool file_assoc_auto_register = false;
 
         // Network
         bool net_use_proxy = false;

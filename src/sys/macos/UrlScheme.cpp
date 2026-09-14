@@ -18,22 +18,28 @@ static QString bundlePath() {
     return path.endsWith(".app") ? path : QString();
 }
 
-QString UrlScheme_DesiredState() {
+// Config files are Info.plist document types at the Alternate rank, so there is nothing to toggle for them at runtime.
+QString UrlScheme_DesiredState(Association a) {
     const QString bundle = bundlePath();
-    return bundle.isEmpty() ? QString() : "v2|" + bundle;
+    if (a != Association::Links || bundle.isEmpty()) return {};
+    return "v2|" + bundle;
 }
 
-// LaunchServices keys handlers by bundle path, not by a shared name, so a second copy cannot take ours over.
-bool UrlScheme_IsCurrent() {
+bool UrlScheme_AutoRegisterByDefault() {
     return true;
 }
 
-void UrlScheme_Apply() {
+// LaunchServices keys handlers by bundle path, not by a shared name, so a second copy cannot take ours over.
+bool UrlScheme_IsCurrent(Association) {
+    return true;
+}
+
+void UrlScheme_Apply(Association) {
     const QString bundle = bundlePath();
     if (bundle.isEmpty()) return;
     QProcess::execute(kLsregister, {"-f", bundle});
 }
 
 // The scheme comes from the bundle's Info.plist, so there is nothing of ours to take back; unregistering only lasts until the next launch.
-void UrlScheme_Remove() {
+void UrlScheme_Remove(Association) {
 }

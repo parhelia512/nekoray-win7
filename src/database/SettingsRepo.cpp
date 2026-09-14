@@ -77,6 +77,7 @@ namespace Configs {
             {"allow_stopping_active_profile", &allow_stopping_active_profile},
             {"disable_mixed_inbound",         &disable_mixed_inbound},
             {"url_scheme_auto_register",      &url_scheme_auto_register},
+            {"file_assoc_auto_register",      &file_assoc_auto_register},
             {"system_proxy_enabled",          &remember_system_proxy},
             {"tun_mode_enabled",              &remember_tun},
             {"reset_proxy_on_disable_sp", &reset_proxy_on_disable_sp},
@@ -194,6 +195,7 @@ namespace Configs {
             {"inbound_user",               &inbound_user},
             {"inbound_pass",               &inbound_pass},
             {"url_scheme_mirror",          &url_scheme_mirror},
+            {"file_assoc_mirror",          &file_assoc_mirror},
         };
 
         stringListMap = {

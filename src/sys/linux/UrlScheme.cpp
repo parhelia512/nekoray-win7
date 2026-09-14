@@ -9,7 +9,15 @@
 #include <QStandardPaths>
 #include <QTextStream>
 
+// Both associations live in this one entry, told apart by its MimeType list.
 static const QString kDesktopId = "throne-url-handler.desktop";
+
+static const QStringList kLinkTypes = {"x-scheme-handler/throne"};
+static const QStringList kConfigTypes = {"application/json", "application/yaml", "text/yaml"};
+
+static const QStringList &typesOf(Association a) {
+    return a == Association::Links ? kLinkTypes : kConfigTypes;
+}
 
 // AppImage: point at the outer image ($APPIMAGE), not the extracted binary, which disappears after exit.
 static QString execTarget() {
@@ -18,9 +26,16 @@ static QString execTarget() {
     return QApplication::applicationFilePath();
 }
 
+static QString execLine() {
+    return "Exec=\"" + execTarget() + "\" %U";
+}
+
+static QString appsDir() {
+    return QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation);
+}
+
 static QString desktopFilePath() {
-    const QString dir = QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation);
-    return dir + "/" + kDesktopId;
+    return appsDir() + "/" + kDesktopId;
 }
 
 // "throne" is in no icon theme for the /opt and AppImage layouts, so unpack a copy and use an absolute path.
@@ -32,63 +47,95 @@ static QString iconTarget() {
     return QFile::copy(":/Throne/Throne.png", path) ? path : QStringLiteral("throne");
 }
 
-QString UrlScheme_DesiredState() {
-    return "v4|" + execTarget();
-}
+struct DesktopEntry {
+    bool current = false;
+    QStringList types;
+};
 
-// iconTarget() has side effects, so match the Exec line rather than regenerating the entry to compare it.
-bool UrlScheme_IsCurrent() {
+// iconTarget() has side effects, so the entry is parsed rather than regenerated to compare it; types we no longer claim are dropped.
+static DesktopEntry readEntry() {
+    DesktopEntry entry;
     QFile f(desktopFilePath());
-    if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) return false;
-    const QString expected = "Exec=\"" + execTarget() + "\" %U";
+    if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) return entry;
+    const QString exec = execLine();
     while (!f.atEnd()) {
-        if (QString::fromUtf8(f.readLine()).trimmed() == expected) return true;
+        const QString line = QString::fromUtf8(f.readLine()).trimmed();
+        if (line == exec) entry.current = true;
+        if (!line.startsWith("MimeType=")) continue;
+        for (const QString &type : line.mid(9).split(';', Qt::SkipEmptyParts)) {
+            if (kLinkTypes.contains(type) || kConfigTypes.contains(type)) entry.types << type;
+        }
     }
-    return false;
+    return entry;
 }
 
-void UrlScheme_Apply() {
+static void writeEntry(const QStringList &types) {
     const QString path = desktopFilePath();
-    QDir().mkpath(QFileInfo(path).absolutePath());
-
-    QFile f(path);
-    if (f.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QTextStream ts(&f);
-        ts << "[Desktop Entry]\n"
-           << "Type=Application\n"
-           << "Name=Throne\n"
-           << "Icon=" << iconTarget() << "\n"
-           << "Exec=\"" << execTarget() << "\" %U\n"
-           << "MimeType=x-scheme-handler/throne;application/json;application/yaml;text/yaml;\n"
-           << "Terminal=false\n"
-           << "NoDisplay=true\n";
-        ts.flush();
-        f.close();
+    if (types.isEmpty()) {
+        QFile::remove(path);
+        const QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+        QFile::remove(dataDir + "/throne.png");
+        QDir().rmdir(dataDir);
+    } else {
+        QDir().mkpath(QFileInfo(path).absolutePath());
+        QFile f(path);
+        if (f.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            QTextStream ts(&f);
+            ts << "[Desktop Entry]\n"
+               << "Type=Application\n"
+               << "Name=Throne\n"
+               << "Icon=" << iconTarget() << "\n"
+               << execLine() << "\n"
+               << "MimeType=" << types.join(';') << ";\n"
+               << "Terminal=false\n"
+               << "NoDisplay=true\n";
+            ts.flush();
+            f.close();
+        }
     }
 
     // mimeinfo.cache alone makes the association resolve; `xdg-mime default` is deliberately not called, it only ever wrote us into the shared mimeapps.list.
     // May be absent on minimal systems; execute() just returns nonzero then.
-    const QString appsDir = QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation);
-    QProcess::execute("update-desktop-database", {appsDir});
+    QProcess::execute("update-desktop-database", {appsDir()});
+}
+
+QString UrlScheme_DesiredState(Association a) {
+    return (a == Association::Links ? "v4|" : "v1|") + execTarget();
+}
+
+bool UrlScheme_AutoRegisterByDefault() {
+    return true;
+}
+
+bool UrlScheme_IsCurrent(Association a) {
+    const DesktopEntry entry = readEntry();
+    return entry.current && entry.types.contains(typesOf(a).first());
+}
+
+void UrlScheme_Apply(Association a) {
+    QStringList types = readEntry().types;
+    for (const QString &type : typesOf(a)) {
+        if (!types.contains(type)) types << type;
+    }
+    writeEntry(types);
 }
 
 // xdg writes a desktop-prefixed list when XDG_CURRENT_DESKTOP is set, and the unprefixed one otherwise.
 static QStringList mimeappsLists() {
     const QString cfgDir = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
-    const QString appsDir = QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation);
 
     QStringList paths;
     const auto desktops = QProcessEnvironment::systemEnvironment().value("XDG_CURRENT_DESKTOP").split(':', Qt::SkipEmptyParts);
     for (const QString &de : desktops) {
         paths << cfgDir + "/" + de.toLower() + "-mimeapps.list";
-        paths << appsDir + "/" + de.toLower() + "-mimeapps.list";
+        paths << appsDir() + "/" + de.toLower() + "-mimeapps.list";
     }
-    paths << cfgDir + "/mimeapps.list" << appsDir + "/mimeapps.list";
+    paths << cfgDir + "/mimeapps.list" << appsDir() + "/mimeapps.list";
     return paths;
 }
 
 // xdg-mime has no "unset", so the associations it wrote are stripped by hand; handlers sharing the line are kept.
-static void stripFromMimeapps(const QString &path) {
+static void stripFromMimeapps(const QString &path, const QStringList &types) {
     QFile f(path);
     if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) return;
     const QStringList lines = QString::fromUtf8(f.readAll()).split('\n');
@@ -98,7 +145,7 @@ static void stripFromMimeapps(const QString &path) {
     bool changed = false;
     for (const QString &line : lines) {
         const int eq = line.indexOf('=');
-        if (eq < 0 || line.trimmed().startsWith('[') || !line.contains(kDesktopId)) {
+        if (eq < 0 || line.trimmed().startsWith('[') || !types.contains(line.left(eq).trimmed()) || !line.contains(kDesktopId)) {
             out << line;
             continue;
         }
@@ -124,14 +171,10 @@ static void stripFromMimeapps(const QString &path) {
     }
 }
 
-void UrlScheme_Remove() {
-    QFile::remove(desktopFilePath());
+void UrlScheme_Remove(Association a) {
+    QStringList types = readEntry().types;
+    for (const QString &type : typesOf(a)) types.removeAll(type);
+    writeEntry(types);
 
-    const QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    QFile::remove(dataDir + "/throne.png");
-    QDir().rmdir(dataDir);
-
-    for (const QString &path : mimeappsLists()) stripFromMimeapps(path);
-
-    QProcess::execute("update-desktop-database", {QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation)});
+    for (const QString &path : mimeappsLists()) stripFromMimeapps(path, typesOf(a));
 }

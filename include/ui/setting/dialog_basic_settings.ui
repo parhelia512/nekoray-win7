@@ -315,20 +315,20 @@
        <item>
         <widget class="QGroupBox" name="url_scheme_box">
          <property name="title">
-          <string>URL Scheme</string>
+          <string>Links and Files</string>
          </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_url_scheme">
-          <item>
+         <layout class="QGridLayout" name="gridLayout_url_scheme">
+          <item row="0" column="0">
            <widget class="QCheckBox" name="url_scheme_auto_register">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Registers Throne as the handler for throne:// links and adds it to the &quot;Open with&quot; list for config files, re-applying the registration whenever the install is moved.&lt;/p&gt;&lt;p&gt;Turning this off does not undo an existing registration: use Uninstall for that.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Registers Throne as the handler for throne:// links, re-applying the registration whenever the install is moved.&lt;/p&gt;&lt;p&gt;Turning this off does not undo an existing registration: use Uninstall for that.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Register throne:// links at startup</string>
             </property>
            </widget>
           </item>
-          <item>
+          <item row="0" column="1">
            <spacer name="horizontalSpacer_url_scheme">
             <property name="orientation">
              <enum>Qt::Orientation::Horizontal</enum>
@@ -341,14 +341,14 @@
             </property>
            </spacer>
           </item>
-          <item>
+          <item row="0" column="2">
            <widget class="QLabel" name="url_scheme_status">
             <property name="text">
              <string notr="true"/>
             </property>
            </widget>
           </item>
-          <item>
+          <item row="0" column="3">
            <widget class="QPushButton" name="url_scheme_install">
             <property name="toolTip">
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Registers the handler now, without waiting for the next start.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -358,10 +358,47 @@
             </property>
            </widget>
           </item>
-          <item>
+          <item row="0" column="4">
            <widget class="QPushButton" name="url_scheme_uninstall">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Removes every entry Throne wrote for the handler and the config file associations. Entries owned by other applications are left alone.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Removes the throne:// handler Throne wrote. Entries owned by other applications are left alone.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Uninstall</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="file_assoc_auto_register">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Adds Throne to the &quot;Open with&quot; list for config files such as JSON and YAML, re-applying the registration whenever the install is moved.&lt;/p&gt;&lt;p&gt;Turning this off does not undo an existing registration: use Uninstall for that.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Register config files at startup</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QLabel" name="file_assoc_status">
+            <property name="text">
+             <string notr="true"/>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QPushButton" name="file_assoc_install">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Registers the associations now, without waiting for the next start.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Install</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="4">
+           <widget class="QPushButton" name="file_assoc_uninstall">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Removes every config file association Throne wrote, including those added by older versions. Associations owned by other applications are left alone.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Uninstall</string>

@@ -39,6 +39,8 @@ DisableProgramGroupPage=yes
 ArchitecturesInstallIn64BitMode=win64
 CloseApplications=force
 RestartApplications=no
+; Uninstall removes the associations Throne registers at runtime, so Explorer has to reload them.
+ChangesAssociations=yes
 Compression=lzma2/ultra64
 SolidCompression=yes
 LZMAUseSeparateProcess=yes
@@ -186,6 +188,52 @@ begin
     Sleep(1000);
 end;
 
+// Throne writes these at runtime; an entry that points at another copy by now belongs to that copy.
+function PointsAtApp(const SubKey: String): Boolean;
+var
+  Command: String;
+begin
+  Result := RegQueryStringValue(HKEY_CURRENT_USER, SubKey + '\shell\open\command', '', Command) and
+    (Pos(Lowercase(ExpandConstant('{app}\Throne.exe')), Lowercase(Command)) > 0);
+end;
+
+procedure RemoveOpenWith(const Ext: String);
+begin
+  RegDeleteValue(HKEY_CURRENT_USER, 'Software\Classes\' + Ext + '\OpenWithProgids', 'Throne.Config');
+end;
+
+procedure RemoveAssociations;
+begin
+  if PointsAtApp('Software\Classes\throne') then
+    RegDeleteKeyIncludingSubkeys(HKEY_CURRENT_USER, 'Software\Classes\throne');
+  if PointsAtApp('Software\Classes\Applications\Throne.exe') then
+    RegDeleteKeyIncludingSubkeys(HKEY_CURRENT_USER, 'Software\Classes\Applications\Throne.exe');
+  if not PointsAtApp('Software\Classes\Throne.Config') then
+    Exit;
+  RegDeleteKeyIncludingSubkeys(HKEY_CURRENT_USER, 'Software\Classes\Throne.Config');
+  RemoveOpenWith('.json');
+  RemoveOpenWith('.conf');
+  RemoveOpenWith('.yaml');
+  RemoveOpenWith('.yml');
+  // Claimed before 1.3.
+  RemoveOpenWith('.ini');
+  RemoveOpenWith('.txt');
+end;
+
+// Throne writes these to HKLM when it runs elevated, so a per-user uninstall lacks the rights to remove them.
+procedure RemoveCrashDumpKey(const ExeName: String);
+var
+  SubKey, Folder: String;
+begin
+  SubKey := 'SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\' + ExeName;
+  if not RegQueryStringValue(HKEY_LOCAL_MACHINE, SubKey, 'DumpFolder', Folder) then
+    Exit;
+  Folder := Lowercase(AddBackslash(Folder));
+  if (Pos(Lowercase(AddBackslash(ExpandConstant('{app}'))), Folder) = 1) or
+     (Pos(Lowercase(ExpandConstant('{localappdata}\Throne\')), Folder) = 1) then
+    RegDeleteKeyIncludingSubkeys(HKEY_LOCAL_MACHINE, SubKey);
+end;
+
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   App: String;
@@ -194,6 +242,9 @@ begin
   if CurUninstallStep = usUninstall then
   begin
     StopThrone;
+    RemoveAssociations;
+    RemoveCrashDumpKey('Throne.exe');
+    RemoveCrashDumpKey('ThroneCore.exe');
     DeleteUserData := SuppressibleMsgBox('Also delete your Throne profiles, settings and logs?' + #13#10#13#10 +
       'Choose No if you plan to reinstall Throne later and want to keep them.', mbConfirmation, MB_YESNO, IDYES) = IDYES;
   end
