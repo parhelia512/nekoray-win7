@@ -72,7 +72,7 @@ void MainWindow::changeEvent(QEvent *event) {
         type == QEvent::PaletteChange ||
         type == QEvent::StyleChange) {
         scheduleProxyListRefresh();
-        refreshConnectionCloseIcons();
+        refreshConnectionIcons();
     }
     if (type == QEvent::WindowStateChange) {
         syncConnectionViewState();

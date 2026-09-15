@@ -5,6 +5,8 @@
 #include <QHeaderView>
 #include <QKeyEvent>
 #include <QLineEdit>
+#include <QPainter>
+#include <QStyle>
 #include <QToolButton>
 
 #include "include/ui/utils/ConnectionsTreeModel.h"
@@ -45,6 +47,17 @@ public:
                 textFor(ConnectionsTreeModel::ColProtocol), textFor(ConnectionsTreeModel::ColOutbound)};
     }
 
+    // Marks the sorted section with an arrow past its label; the room reserved for it keeps it off a narrow column's text.
+    void setSortSection(int section, bool descending) {
+        if (section == m_sortSection && descending == m_sortDescending) return;
+        const int previous = m_sortSection;
+        m_sortSection = section;
+        m_sortDescending = descending;
+        if (previous != section) resizeSections();
+        if (previous >= 0) updateSection(previous);
+        if (section >= 0) updateSection(section);
+    }
+
     QSize sizeHint() const override {
         QSize s = QHeaderView::sizeHint();
         if (m_filtersVisible) {
@@ -57,10 +70,31 @@ protected:
     // Protocol/Outbound are ResizeToContents, so without a floor their fields shrink to the header label's width.
     QSize sectionSizeFromContents(int logicalIndex) const override {
         QSize s = QHeaderView::sectionSizeFromContents(logicalIndex);
+        if (logicalIndex == m_sortSection) {
+            s.rwidth() += 2 * kSortArrowRoom;
+        }
         if (m_filtersVisible && editForColumn(logicalIndex) != nullptr) {
             s.setWidth(qMax(s.width(), 120));
         }
         return s;
+    }
+
+    void paintSection(QPainter *painter, const QRect &rect, int logicalIndex) const override {
+        QHeaderView::paintSection(painter, rect, logicalIndex);
+        if (logicalIndex != m_sortSection) return;
+
+        // The label is top-aligned, so the arrow sits on its line just past the text.
+        const QFontMetrics metrics(font());
+        const QString label = model() ? model()->headerData(logicalIndex, orientation()).toString() : QString();
+        const qreal x = qMin(rect.center().x() + metrics.horizontalAdvance(label) / 2.0 + 10, rect.right() - 6.0);
+        const qreal y = rect.top() + style()->pixelMetric(QStyle::PM_HeaderMargin, nullptr, this) + metrics.height() / 2.0;
+        const qreal tip = m_sortDescending ? 2.5 : -2.5;
+        painter->save();
+        painter->setRenderHint(QPainter::Antialiasing);
+        painter->setPen(Qt::NoPen);
+        painter->setBrush(palette().color(QPalette::Highlight));
+        painter->drawPolygon(QPolygonF{{x - 4, y - tip}, {x + 4, y - tip}, {x, y + tip}});
+        painter->restore();
     }
 
     void updateGeometries() override {
@@ -138,6 +172,8 @@ signals:
     void closeRequested();
 
 private:
+    static constexpr int kSortArrowRoom = 14;
+
     QLineEdit *makeEdit() {
         auto *edit = new QLineEdit(this->viewport());
         edit->setPlaceholderText(tr("Filter..."));
@@ -187,4 +223,6 @@ private:
     QLineEdit *protocol_filter;
     QLineEdit *outbound_filter;
     bool m_filtersVisible = false;
+    int m_sortSection = -1;
+    bool m_sortDescending = false;
 };

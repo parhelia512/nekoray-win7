@@ -37,6 +37,48 @@ namespace
         painter.end();
         return QIcon(pixmap);
     }
+
+    // Two chevrons pointing apart (expand) or together (collapse), rendered per scale so they stay crisp.
+    QIcon FoldIcon(bool expand, const QColor& color)
+    {
+        QIcon icon;
+        for (const qreal scale : {1.0, 2.0, 3.0})
+        {
+            QPixmap pixmap(QSize(16, 16) * scale);
+            pixmap.setDevicePixelRatio(scale);
+            pixmap.fill(Qt::transparent);
+            QPainter painter(&pixmap);
+            painter.setRenderHint(QPainter::Antialiasing);
+            painter.setPen(QPen(color, 1.6, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+            const auto chevron = [&painter](qreal y, bool up) {
+                const qreal tip = up ? -1.5 : 1.5;
+                painter.drawPolyline(QPolygonF{{4.0, y - tip}, {8.0, y + tip}, {12.0, y - tip}});
+            };
+            chevron(4.0, expand);
+            chevron(12.0, !expand);
+            painter.end();
+            icon.addPixmap(pixmap);
+        }
+        return icon;
+    }
+
+    int ColumnForSort(Stats::ConnectionSort sort)
+    {
+        switch (sort)
+        {
+        case Stats::ByProcess:       return ConnectionsTreeModel::ColTarget;
+        case Stats::BySource:        return ConnectionsTreeModel::ColSource;
+        case Stats::ByProtocol:      return ConnectionsTreeModel::ColProtocol;
+        case Stats::ByOutbound:      return ConnectionsTreeModel::ColOutbound;
+        case Stats::ByTraffic:
+        case Stats::ByDownload:
+        case Stats::ByUpload:        return ConnectionsTreeModel::ColTraffic;
+        case Stats::BySpeed:
+        case Stats::ByDownloadSpeed:
+        case Stats::ByUploadSpeed:   return ConnectionsTreeModel::ColSpeed;
+        default:                     return -1;
+        }
+    }
 }
 
 void MainWindow::setupConnectionList()
@@ -49,6 +91,8 @@ void MainWindow::setupConnectionList()
     // Order matters: setModel() after this would re-init the sections and drop the resize modes below.
     connectionFilterHeader = new ConnectionsFilterHeader(ui->connections);
     ui->connections->setHeader(connectionFilterHeader);
+    // QTreeView::setHeader() re-applies setSortingEnabled(false), which switches section clicks back off.
+    connectionFilterHeader->setSectionsClickable(true);
 
     auto* header = ui->connections->header();
     header->setHighlightSections(false);
@@ -70,7 +114,7 @@ void MainWindow::setupConnectionList()
     // A single click already toggles a process row; QTreeView's own double-click toggle would undo it.
     ui->connections->setExpandsOnDoubleClick(false);
 
-    refreshConnectionCloseIcons();
+    refreshConnectionIcons();
     restoreConnectionSort();
     setupConnectionSortMenu();
     setupConnectionFilter();
@@ -87,11 +131,13 @@ void MainWindow::setupConnectionList()
     });
     connect(ui->connections, &QTreeView::collapsed, this, [this](const QModelIndex& index)
     {
-        m_collapsedProcesses.insert(index.data(ConnectionsTreeModel::ProcessNameRole).toString());
+        m_processExpanded.insert(index.data(ConnectionsTreeModel::ProcessNameRole).toString(), false);
+        syncConnectionExpandButton();
     });
     connect(ui->connections, &QTreeView::expanded, this, [this](const QModelIndex& index)
     {
-        m_collapsedProcesses.remove(index.data(ConnectionsTreeModel::ProcessNameRole).toString());
+        m_processExpanded.insert(index.data(ConnectionsTreeModel::ProcessNameRole).toString(), true);
+        syncConnectionExpandButton();
     });
 
     connect(header, &QHeaderView::sectionClicked, this, [this](int section)
@@ -124,6 +170,8 @@ void MainWindow::restoreConnectionSort()
     if (stored == Stats::BySource && !LocalNetwork::LanInboundEnabled()) stored = Stats::Default;
     // Runs before setup_rpc() spawns the lister thread, so writing the pair unguarded is safe.
     Stats::connection_lister->restoreSort(static_cast<Stats::ConnectionSort>(stored), settings->connection_sort_asc);
+    const auto restored = Stats::connection_lister->getSort();
+    connectionFilterHeader->setSortSection(ColumnForSort(restored), Stats::SortIsDescending(restored, Stats::connection_lister->isSortAscending()));
 }
 
 void MainWindow::applyConnectionSort(Stats::ConnectionSort sort)
@@ -134,6 +182,9 @@ void MainWindow::applyConnectionSort(Stats::ConnectionSort sort)
     settings->connection_sort_asc = Stats::connection_lister->isSortAscending();
     settings->Save();
     Stats::connection_lister->ForceUpdate();
+
+    const auto applied = Stats::connection_lister->getSort();
+    connectionFilterHeader->setSortSection(ColumnForSort(applied), Stats::SortIsDescending(applied, Stats::connection_lister->isSortAscending()));
 }
 
 void MainWindow::setupConnectionFilter()
@@ -145,6 +196,9 @@ void MainWindow::setupConnectionFilter()
     connect(btnFilter, &QToolButton::toggled, connectionFilterHeader, &ConnectionsFilterHeader::setFiltersVisible);
     connect(connectionFilterHeader, &ConnectionsFilterHeader::closeRequested, btnFilter, [btnFilter] { btnFilter->setChecked(false); });
 
+    connectionExpandButton = new QToolButton(this);
+    connect(connectionExpandButton, &QToolButton::clicked, this, [this] { setConnectionGroupsExpanded(!connectionGroupsExpanded()); });
+
     connectionCloseAllButton = new QToolButton(this);
     connectionCloseAllButton->setIcon(connectionCloseIcon);
     connectionCloseAllButton->setToolTip(tr("Close every connection listed below"));
@@ -155,6 +209,7 @@ void MainWindow::setupConnectionFilter()
     cornerLayout->setContentsMargins(0, 0, 0, 0);
     cornerLayout->setSpacing(2);
     cornerLayout->addWidget(btnFilter);
+    cornerLayout->addWidget(connectionExpandButton);
     cornerLayout->addWidget(connectionCloseAllButton);
     ui->stats_widget->setCornerWidget(corner, Qt::TopRightCorner);
 
@@ -167,6 +222,8 @@ void MainWindow::setupConnectionFilter()
     connectionFilterDebounce->setInterval(50);
     connect(connectionFilterDebounce, &QTimer::timeout, this, [this] { applyConnectionFilters(); });
     connect(connectionFilterHeader, &ConnectionsFilterHeader::filtersChanged, this, [this] { connectionFilterDebounce->start(); });
+
+    syncConnectionExpandButton();
 }
 
 void MainWindow::applyConnectionFilters()
@@ -234,10 +291,14 @@ void MainWindow::setupConnectionSortMenu()
     });
 }
 
-void MainWindow::refreshConnectionCloseIcons()
+void MainWindow::refreshConnectionIcons()
 {
-    connectionCloseIcon = RecolorIcon(":/icon/material/cancel.png", palette().color(QPalette::ButtonText));
+    const QColor color = palette().color(QPalette::ButtonText);
+    connectionCloseIcon = RecolorIcon(":/icon/material/cancel.png", color);
+    connectionExpandIcon = FoldIcon(true, color);
+    connectionCollapseIcon = FoldIcon(false, color);
     if (connectionCloseAllButton != nullptr) connectionCloseAllButton->setIcon(connectionCloseIcon);
+    syncConnectionExpandButton();
 }
 
 QStringList MainWindow::listedConnectionIds() const
@@ -278,26 +339,50 @@ void MainWindow::UpdateConnectionList(const QList<Stats::ConnectionMetadata>& co
 
 void MainWindow::syncConnectionExpansion()
 {
-    // Rows keep their expansion across polls; only rows new to the view (or re-shown by a filter) arrive collapsed.
-    for (int row = 0; row < connectionsFilterModel->rowCount(); row++)
     {
-        const QModelIndex group = connectionsFilterModel->index(row, 0);
-        const bool expand = !m_collapsedProcesses.contains(group.data(ConnectionsTreeModel::ProcessNameRole).toString());
-        if (ui->connections->isExpanded(group) != expand) ui->connections->setExpanded(group, expand);
+        // Blocked so the expanded/collapsed handlers only ever record the user's own choices.
+        const QSignalBlocker blocker(ui->connections);
+        // Rows keep their expansion across polls; only rows new to the view (or re-shown by a filter) arrive collapsed.
+        for (int row = 0; row < connectionsFilterModel->rowCount(); row++)
+        {
+            const QModelIndex group = connectionsFilterModel->index(row, 0);
+            const QString process = group.data(ConnectionsTreeModel::ProcessNameRole).toString();
+            const bool expand = m_processExpanded.value(process, m_processesExpandedByDefault);
+            if (ui->connections->isExpanded(group) != expand) ui->connections->setExpanded(group, expand);
+        }
     }
+    syncConnectionExpandButton();
 }
 
 void MainWindow::setConnectionGroupsExpanded(bool expanded)
 {
-    if (expanded)
+    // Also decides how processes that show up later start out, until one is toggled by hand.
+    m_processesExpandedByDefault = expanded;
+    m_processExpanded.clear();
     {
-        m_collapsedProcesses.clear();
-        ui->connections->expandAll();
-        return;
+        const QSignalBlocker blocker(ui->connections);
+        if (expanded) ui->connections->expandAll();
+        else ui->connections->collapseAll();
     }
-    for (int row = 0; row < connectionsModel->rowCount(); row++)
-        m_collapsedProcesses.insert(connectionsModel->index(row, 0).data(ConnectionsTreeModel::ProcessNameRole).toString());
-    ui->connections->collapseAll();
+    syncConnectionExpandButton();
+}
+
+bool MainWindow::connectionGroupsExpanded() const
+{
+    const int groups = connectionsFilterModel->rowCount();
+    // With nothing listed, the button shows what the next processes will do.
+    if (groups == 0) return m_processesExpandedByDefault;
+    for (int row = 0; row < groups; row++)
+        if (ui->connections->isExpanded(connectionsFilterModel->index(row, 0))) return true;
+    return false;
+}
+
+void MainWindow::syncConnectionExpandButton()
+{
+    if (connectionExpandButton == nullptr) return;
+    const bool expanded = connectionGroupsExpanded();
+    connectionExpandButton->setIcon(expanded ? connectionCollapseIcon : connectionExpandIcon);
+    connectionExpandButton->setToolTip(expanded ? tr("Collapse All") : tr("Expand All"));
 }
 
 QString MainWindow::routeRuleAppendBlocker() const

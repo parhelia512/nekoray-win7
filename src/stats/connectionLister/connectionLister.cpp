@@ -126,6 +126,22 @@ namespace Stats
         }
     }
 
+    bool SortIsDescending(const ConnectionSort sort, const bool ascending)
+    {
+        switch (sort)
+        {
+        case Default:
+            return false;
+        case ByProcess:
+        case ByOutbound:
+        case ByProtocol:
+        case BySource:
+            return ascending;
+        default:
+            return !ascending;
+        }
+    }
+
     void ConnectionLister::update(const bool pushToUi)
     {
         libcore::QueryConnectionsResp resp = API::defaultClient->QueryConnections();

@@ -278,10 +278,14 @@ private:
     class ConnectionsTreeModel *connectionsModel = nullptr;
     class ConnectionsTreeFilterProxyModel *connectionsFilterModel = nullptr;
     class ConnectionsFilterHeader *connectionFilterHeader = nullptr;
-    QSet<QString> m_collapsedProcesses;
+    QHash<QString, bool> m_processExpanded; // per-process choices; the rest follow m_processesExpandedByDefault
+    bool m_processesExpandedByDefault = true;
     QTimer *connectionFilterDebounce = nullptr;
+    QToolButton *connectionExpandButton = nullptr;
     QToolButton *connectionCloseAllButton = nullptr;
     QIcon connectionCloseIcon;
+    QIcon connectionExpandIcon;
+    QIcon connectionCollapseIcon;
     int toolTipID;
     SpeedWidget *speedChartWidget;
     class RuntimeStatsWidget *runtimeStatsWidget = nullptr;
@@ -516,11 +520,15 @@ private:
 
     void setConnectionGroupsExpanded(bool expanded);
 
+    bool connectionGroupsExpanded() const;
+
+    void syncConnectionExpandButton();
+
     void closeConnections(const QStringList &ids);
 
     QStringList listedConnectionIds() const;
 
-    void refreshConnectionCloseIcons();
+    void refreshConnectionIcons();
 
     friend class TestRunner;
 

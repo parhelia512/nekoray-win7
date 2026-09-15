@@ -16,7 +16,6 @@ namespace {
         return static_cast<TreeItem *>(index.internalPointer());
     }
 
-    // Same directions as the lister's comparators: numbers biggest-first and text A→Z until the header is clicked again.
     template <typename Item, typename Key>
     void sortItems(std::vector<std::unique_ptr<Item>> &items, bool descending, Key key) {
         std::stable_sort(items.begin(), items.end(), [&](const std::unique_ptr<Item> &a, const std::unique_ptr<Item> &b) {
@@ -236,33 +235,34 @@ void ConnectionsTreeModel::setConnections(const QList<Stats::ConnectionMetadata>
     }
 
     // Rows arrive in the lister's order, which already implements Default, Source, Protocol and Outbound.
+    const bool descending = Stats::SortIsDescending(sort, ascending);
     switch (sort) {
     case Stats::ByTraffic:
-        sortTree(groups, !ascending, [](const ProcessGroupItem &g) { return g.totalUpload + g.totalDownload; },
+        sortTree(groups, descending, [](const ProcessGroupItem &g) { return g.totalUpload + g.totalDownload; },
                  [](const ConnectionLeafItem &l) { return l.upload + l.download; });
         break;
     case Stats::ByDownload:
-        sortTree(groups, !ascending, [](const ProcessGroupItem &g) { return g.totalDownload; },
+        sortTree(groups, descending, [](const ProcessGroupItem &g) { return g.totalDownload; },
                  [](const ConnectionLeafItem &l) { return l.download; });
         break;
     case Stats::ByUpload:
-        sortTree(groups, !ascending, [](const ProcessGroupItem &g) { return g.totalUpload; },
+        sortTree(groups, descending, [](const ProcessGroupItem &g) { return g.totalUpload; },
                  [](const ConnectionLeafItem &l) { return l.upload; });
         break;
     case Stats::BySpeed:
-        sortTree(groups, !ascending, [](const ProcessGroupItem &g) { return g.totalUploadSpeed + g.totalDownloadSpeed; },
+        sortTree(groups, descending, [](const ProcessGroupItem &g) { return g.totalUploadSpeed + g.totalDownloadSpeed; },
                  [](const ConnectionLeafItem &l) { return l.uploadSpeed + l.downloadSpeed; });
         break;
     case Stats::ByDownloadSpeed:
-        sortTree(groups, !ascending, [](const ProcessGroupItem &g) { return g.totalDownloadSpeed; },
+        sortTree(groups, descending, [](const ProcessGroupItem &g) { return g.totalDownloadSpeed; },
                  [](const ConnectionLeafItem &l) { return l.downloadSpeed; });
         break;
     case Stats::ByUploadSpeed:
-        sortTree(groups, !ascending, [](const ProcessGroupItem &g) { return g.totalUploadSpeed; },
+        sortTree(groups, descending, [](const ProcessGroupItem &g) { return g.totalUploadSpeed; },
                  [](const ConnectionLeafItem &l) { return l.uploadSpeed; });
         break;
     case Stats::ByProcess:
-        sortTree(groups, ascending, [](const ProcessGroupItem &g) -> const QString & { return g.processName; },
+        sortTree(groups, descending, [](const ProcessGroupItem &g) -> const QString & { return g.processName; },
                  [](const ConnectionLeafItem &l) -> const QString & { return l.destText; });
         break;
     default:

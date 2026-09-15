@@ -28,6 +28,9 @@ namespace Stats
     // The core sends M.Socksaddr.String(): "1.2.3.4:5678" or "[fe80::1]:5678", so an unbracketed form must split at the last colon.
     QString EndpointHost(const QString& endpoint);
 
+    // Unflipped sorts put the biggest number first but text A→Z, so `ascending` alone does not say which way rows run.
+    bool SortIsDescending(ConnectionSort sort, bool ascending);
+
     class ConnectionMetadata
     {
         public:
