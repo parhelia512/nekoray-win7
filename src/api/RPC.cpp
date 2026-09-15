@@ -674,4 +674,32 @@ namespace API {
         }
     }
 
+    libcore::DiagnosticsResponse Client::CaptureDiagnostics(bool *rpcOK, const libcore::DiagnosticsRequest &request, int timeoutMs)
+    {
+        libcore::DiagnosticsResponse reply;
+        std::vector<uint8_t> resp;
+        auto status = channel->Call("CaptureDiagnostics", spb::pb::serialize<std::string>(request), resp, timeoutMs);
+
+        if (status == LocalSocketChannel::CallOK && tryDeserialize(resp, reply)) {
+            *rpcOK = true;
+            return reply;
+        } else {
+            NOT_OK
+            return {};
+        }
+    }
+
+    void Client::StopDiagnostics(bool *rpcOK)
+    {
+        const libcore::EmptyReq request;
+        std::vector<uint8_t> resp;
+        auto status = channel->Call("StopDiagnostics", spb::pb::serialize<std::string>(request), resp);
+
+        if (status == LocalSocketChannel::CallOK) {
+            *rpcOK = true;
+        } else {
+            NOT_OK
+        }
+    }
+
 } // namespace API

@@ -131,6 +131,8 @@ var handlers = map[string]handlerFn{
 	"QueryVPNStatus":      handle(globalServer.QueryVPNStatus),
 	"SubmitVPNChallenge":  handle(globalServer.SubmitVPNChallenge),
 	"CancelVPNChallenge":  handle(globalServer.CancelVPNChallenge),
+	"CaptureDiagnostics":  handle(globalServer.CaptureDiagnostics),
+	"StopDiagnostics":     handle(globalServer.StopDiagnostics),
 }
 
 func dispatch(methodName string, payload []byte) ([]byte, error) {

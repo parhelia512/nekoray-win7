@@ -82,6 +82,11 @@ namespace API {
 
         QString CancelVPNChallenge(bool *rpcOK, const QString &endpointTag, const QString &challengeId) const;
 
+        // Blocks for the whole capture window; a timeout does not stop the core, only StopDiagnostics does.
+        libcore::DiagnosticsResponse CaptureDiagnostics(bool *rpcOK, const libcore::DiagnosticsRequest &request, int timeoutMs);
+
+        void StopDiagnostics(bool *rpcOK);
+
     private:
         class LocalSocketChannel;
         std::unique_ptr<LocalSocketChannel> channel;

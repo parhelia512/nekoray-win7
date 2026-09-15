@@ -154,6 +154,9 @@ set(PROJECT_SOURCES
         include/sys/ProcessMetrics.hpp
         src/sys/ProcessMetrics.cpp
 
+        include/sys/CoreDiagnostics.hpp
+        src/sys/CoreDiagnostics.cpp
+
         include/sys/UrlScheme.hpp
         src/sys/UrlScheme.cpp
 
@@ -330,6 +333,10 @@ set(PROJECT_SOURCES
         src/ui/setting/dialog_basic_settings.cpp
         include/ui/setting/dialog_basic_settings.h
         include/ui/setting/dialog_basic_settings.ui
+
+        src/ui/setting/DiagnosticsTab.cpp
+        include/ui/setting/DiagnosticsTab.h
+        include/ui/setting/DiagnosticsTab.ui
 
         src/ui/group/dialog_manage_groups.cpp
         include/ui/group/dialog_manage_groups.h

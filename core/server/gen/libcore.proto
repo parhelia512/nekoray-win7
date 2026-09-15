@@ -37,6 +37,9 @@ service LibcoreService {
   rpc QueryVPNStatus(VPNStatusRequest) returns (VPNStatusResponse);
   rpc SubmitVPNChallenge(SubmitVPNChallengeRequest) returns (ErrorResp);
   rpc CancelVPNChallenge(SubmitVPNChallengeRequest) returns (ErrorResp);
+  //
+  rpc CaptureDiagnostics(DiagnosticsRequest) returns (DiagnosticsResponse);
+  rpc StopDiagnostics(EmptyReq) returns (EmptyResp);
 }
 
 message EmptyReq {}
@@ -430,4 +433,22 @@ message AutoSelectorActionRequest {
 message InstallDashboardRequest {
   optional string archive_path = 1 [default = ""];
   optional string target_dir = 2 [default = ""];
+}
+
+message DiagnosticsAttachment {
+  optional string name = 1 [default = ""];
+  optional bytes data = 2;
+}
+
+message DiagnosticsRequest {
+  optional int32 duration_ms = 1 [default = 0];
+  optional bool contention = 2 [default = false];
+  optional bool trace = 3 [default = false];
+  // Zipped under app/; the core never reads a GUI-supplied path.
+  repeated DiagnosticsAttachment attachments = 4;
+}
+
+message DiagnosticsResponse {
+  optional string error = 1 [default = ""];
+  optional bytes archive = 2;
 }

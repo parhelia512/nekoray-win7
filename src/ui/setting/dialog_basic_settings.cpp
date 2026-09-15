@@ -37,6 +37,7 @@
 
 #include "include/sys/UrlScheme.hpp"
 #include "include/ui/mainwindow.h"
+#include "include/ui/setting/DiagnosticsTab.h"
 
 DialogBasicSettings::DialogBasicSettings(QWidget *parent)
     : QDialog(parent), ui(new Ui::DialogBasicSettings) {
@@ -301,6 +302,8 @@ DialogBasicSettings::DialogBasicSettings(QWidget *parent)
     ui->mozilla_cert->setChecked(Configs::dataManager->settingsRepo->use_mozilla_certs);
 
     D_LOAD_BOOL(skip_cert)
+
+    ui->tabWidget->addTab(new DiagnosticsTab(ui->tabWidget), tr("Diagnostics"));
 
     // The .ui geometry underruns real font metrics/translations and Qt then overlaps the rows (#1671).
     QSize want = sizeHint();

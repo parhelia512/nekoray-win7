@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DiagnosticsTab</class>
+ <widget class="QWidget" name="DiagnosticsTab">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>520</width>
+    <height>360</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="rootLayout">
+   <item>
+    <widget class="QGroupBox" name="groupProfile">
+     <property name="title">
+      <string>Performance profile</string>
+     </property>
+     <layout class="QVBoxLayout" name="profileLayout">
+      <item>
+       <widget class="QLabel" name="intro">
+        <property name="text">
+         <string>Profiles the Core using pprof. The profile itself does not contain any information about your configs, but if you include the logs too, there will be information about your configs in them.</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="contention">
+        <property name="toolTip">
+         <string>Records where goroutines wait on locks and channels.</string>
+        </property>
+        <property name="text">
+         <string>Lock contention</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="trace">
+        <property name="text">
+         <string>Execution trace (larger file)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="includeLogs">
+        <property name="toolTip">
+         <string>Logs contain visited domains and server addresses.</string>
+        </property>
+        <property name="text">
+         <string>Include Throne logs</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="captureRow">
+        <item>
+         <widget class="QPushButton" name="startButton">
+          <property name="text">
+           <string>Start</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QProgressBar" name="progress">
+          <property name="textVisible">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="stopButton">
+          <property name="text">
+           <string>Stop</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="resultRow">
+        <item>
+         <widget class="QLabel" name="status">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string notr="true"/>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+          <property name="textInteractionFlags">
+           <set>Qt::TextInteractionFlag::TextSelectableByMouse</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="showInFolder">
+          <property name="text">
+           <string>Show in folder</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="openFolder">
+          <property name="text">
+           <string>Open folder</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <spacer name="bottomSpacer">
+     <property name="orientation">
+      <enum>Qt::Orientation::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
