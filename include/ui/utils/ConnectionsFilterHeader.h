@@ -7,15 +7,14 @@
 #include <QLineEdit>
 #include <QToolButton>
 
-#include "include/ui/utils/ConnectionsTableModel.h"
+#include "include/ui/utils/ConnectionsTreeModel.h"
 
 class ConnectionsFilterHeader : public QHeaderView {
     Q_OBJECT
 public:
     struct Filters {
         QString source;
-        QString dest;
-        QString process;
+        QString target;
         QString protocol;
         QString outbound;
     };
@@ -25,9 +24,8 @@ public:
         setSectionsClickable(true);
         setDefaultAlignment(Qt::AlignHCenter | Qt::AlignTop);
 
+        target_filter = makeEdit();
         source_filter = makeEdit();
-        dest_filter = makeEdit();
-        process_filter = makeEdit();
         protocol_filter = makeEdit();
         outbound_filter = makeEdit();
 
@@ -43,9 +41,8 @@ public:
     }
 
     Filters filters() const {
-        return {textFor(ConnectionsTableModel::ColSource), textFor(ConnectionsTableModel::ColDest),
-                textFor(ConnectionsTableModel::ColProcess), textFor(ConnectionsTableModel::ColProtocol),
-                textFor(ConnectionsTableModel::ColOutbound)};
+        return {textFor(ConnectionsTreeModel::ColSource), textFor(ConnectionsTreeModel::ColTarget),
+                textFor(ConnectionsTreeModel::ColProtocol), textFor(ConnectionsTreeModel::ColOutbound)};
     }
 
     QSize sizeHint() const override {
@@ -111,13 +108,12 @@ public slots:
 
         // Tab/Backtab/Shortcut focus reasons make QLineEdit select all; OtherFocusReason does not.
         if (visible) {
-            auto *first = isSectionHidden(ConnectionsTableModel::ColSource) ? dest_filter : source_filter;
-            first->setFocus(Qt::OtherFocusReason);
+            target_filter->setFocus(Qt::OtherFocusReason);
         }
     }
 
     void adjustPositions() {
-        if (!m_filtersVisible || count() < ConnectionsTableModel::ColumnCount) return;
+        if (!m_filtersVisible || count() < ConnectionsTreeModel::ColumnCount) return;
 
         const int editHeight = 24;
         const int topPos = height() - editHeight - 4;
@@ -130,11 +126,10 @@ public slots:
             edit->show();
             edit->setGeometry(sectionViewportPosition(section) + 2, topPos, sectionSize(section) - 4, editHeight);
         };
-        place(source_filter, ConnectionsTableModel::ColSource);
-        place(dest_filter, ConnectionsTableModel::ColDest);
-        place(process_filter, ConnectionsTableModel::ColProcess);
-        place(protocol_filter, ConnectionsTableModel::ColProtocol);
-        place(outbound_filter, ConnectionsTableModel::ColOutbound);
+        place(target_filter, ConnectionsTreeModel::ColTarget);
+        place(source_filter, ConnectionsTreeModel::ColSource);
+        place(protocol_filter, ConnectionsTreeModel::ColProtocol);
+        place(outbound_filter, ConnectionsTreeModel::ColOutbound);
     }
 
 signals:
@@ -154,12 +149,11 @@ private:
 
     QLineEdit *editForColumn(int column) const {
         switch (column) {
-        case ConnectionsTableModel::ColSource:   return source_filter;
-        case ConnectionsTableModel::ColDest:     return dest_filter;
-        case ConnectionsTableModel::ColProcess:  return process_filter;
-        case ConnectionsTableModel::ColProtocol: return protocol_filter;
-        case ConnectionsTableModel::ColOutbound: return outbound_filter;
-        default:                                 return nullptr;
+        case ConnectionsTreeModel::ColTarget:   return target_filter;
+        case ConnectionsTreeModel::ColSource:   return source_filter;
+        case ConnectionsTreeModel::ColProtocol: return protocol_filter;
+        case ConnectionsTreeModel::ColOutbound: return outbound_filter;
+        default:                                return nullptr;
         }
     }
 
@@ -170,8 +164,8 @@ private:
         return edit->text();
     }
 
-    std::array<QLineEdit*, 5> filterEdits() const {
-        return {source_filter, dest_filter, process_filter, protocol_filter, outbound_filter};
+    std::array<QLineEdit*, 4> filterEdits() const {
+        return {target_filter, source_filter, protocol_filter, outbound_filter};
     }
 
     static bool isTextEditingKey(QKeyEvent *key) {
@@ -188,9 +182,8 @@ private:
         return false;
     }
 
+    QLineEdit *target_filter;
     QLineEdit *source_filter;
-    QLineEdit *dest_filter;
-    QLineEdit *process_filter;
     QLineEdit *protocol_filter;
     QLineEdit *outbound_filter;
     bool m_filtersVisible = false;

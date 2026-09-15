@@ -2,7 +2,7 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="zh_CN">
 <context>
-    <name>ConnectionsTableModel</name>
+    <name>ConnectionsTreeModel</name>
     <message>
         <source>Close this connection</source>
         <translation type="unfinished"></translation>

@@ -275,10 +275,10 @@ private:
     ExitReason exit_reason = ExitReason::None;
     QMutex mu_download_update;
     QMutex mu_download_dashboard;
-    class ConnectionsTableModel *connectionsModel = nullptr;
-    class ConnectionsFilterProxyModel *connectionsFilterModel = nullptr;
-    class ConnectionCloseDelegate *connectionCloseDelegate = nullptr;
+    class ConnectionsTreeModel *connectionsModel = nullptr;
+    class ConnectionsTreeFilterProxyModel *connectionsFilterModel = nullptr;
     class ConnectionsFilterHeader *connectionFilterHeader = nullptr;
+    QSet<QString> m_collapsedProcesses;
     QTimer *connectionFilterDebounce = nullptr;
     QToolButton *connectionCloseAllButton = nullptr;
     QIcon connectionCloseIcon;
@@ -511,6 +511,10 @@ private:
     void applyConnectionFilters();
 
     void syncConnectionSourceColumn();
+
+    void syncConnectionExpansion();
+
+    void setConnectionGroupsExpanded(bool expanded);
 
     void closeConnections(const QStringList &ids);
 

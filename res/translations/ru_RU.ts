@@ -17,7 +17,7 @@
     </message>
 </context>
 <context>
-    <name>ConnectionsTableModel</name>
+    <name>ConnectionsTreeModel</name>
     <message>
         <source>Close this connection</source>
         <translation>Закрыть это соединение</translation>
