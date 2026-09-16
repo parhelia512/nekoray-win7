@@ -2325,6 +2325,22 @@ namespace Configs {
             if (custom->type == Custom::CustomFullConfig)
             {
                 res->coreConfig = custom->Build().object;
+                // macOS points the system DNS at the TUN address once the core starts; a custom config
+                // brings its own tun inbound, so read the address from there like the generated one.
+                for (const auto item : res->coreConfig["inbounds"].toArray()) {
+                    const auto inbound = item.toObject();
+                    if (inbound["type"].toString() != "tun") continue;
+                    const auto address = inbound["address"];
+                    QStringList addresses;
+                    if (address.isString()) addresses << address.toString();
+                    else for (const auto entry : address.toArray()) addresses << entry.toString();
+                    for (const auto &cidr : addresses) {
+                        if (cidr.contains(':')) continue;
+                        res->tunIPv4CIDR = cidr;
+                        break;
+                    }
+                    if (!res->tunIPv4CIDR.isEmpty()) break;
+                }
                 return res;
             }
         }
