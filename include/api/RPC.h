@@ -1,7 +1,7 @@
 #pragma once
 
 #ifndef Q_MOC_RUN
-#include <core/server/gen/libcore.pb.h>
+#include <core/gen/libcore.pb.h>
 #endif
 #include <QMap>
 #include <QString>
