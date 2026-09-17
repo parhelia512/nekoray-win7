@@ -782,12 +782,6 @@ namespace Configs {
                 if (ctx.tunEnabled && ctx.isResolvedUsed) {
                     return {{"type", "underlying"}};
                 }
-                if (ctx.tunEnabled && ctx.os == Darwin) {
-                    return {
-                        {"type", "udp"},
-                        {"server", dataManager->settingsRepo->core_box_underlying_dns}
-                    };
-                }
                 return {{"type", "local"}};
             }
             if (address.startsWith("dhcp://")) {
@@ -870,12 +864,6 @@ namespace Configs {
 
         void buildDNSSection(BuildContext &ctx, bool useDnsObj = true) {
             const auto &settings = *dataManager->settingsRepo;
-            if (getOS() == Darwin && settings.core_box_underlying_dns.isEmpty() && settings.spmode_vpn)
-            {
-                ctx.error = QObject::tr("Local DNS and Tun mode do not work together, please set an IP to be used as the Local DNS server in the Routing Settings -> Local override");
-                return;
-            }
-
             if (settings.use_dns_object && useDnsObj) {
                 ctx.result->coreConfig["dns"] = QString2QJsonObject(settings.dns_object);
                 return;
