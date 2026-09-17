@@ -18,7 +18,7 @@
 
 #include <optional>
 #include <QKeyEvent>
-#include <QSystemTrayIcon>
+#include "include/ui/widget/TrayIcon.hpp"
 #include <QPointer>
 #include <QTimer>
 #include <QElapsedTimer>
@@ -243,7 +243,7 @@ private:
     ProfilesTableModel *profilesTableModel = nullptr;
 
     ProfilesFilterProxyModel *profilesFilterModel = nullptr;
-    QSystemTrayIcon *tray;
+    TrayIcon *tray;
     QMenu *trayMenu = nullptr;
     QPointer<TrayProfileSelector> traySelector;
     void openTraySelector(bool routing);
