@@ -71,6 +71,27 @@ namespace Configs
         return false;
     }
 
+    QString toAceHost(const QString& host)
+    {
+        // the http transport and Xray's raw header carry a comma list of hosts
+        if (host.contains(',')) {
+            auto parts = host.split(',');
+            for (auto& part : parts) part = toAceHost(part.trimmed());
+            return parts.join(',');
+        }
+        bool ascii = true;
+        for (const auto ch : host) {
+            if (ch.unicode() > 0x7F) {
+                ascii = false;
+                break;
+            }
+        }
+        if (ascii) return host;
+        // toAce is empty for IP literals and for names it rejects
+        const auto ace = QString::fromLatin1(QUrl::toAce(host));
+        return ace.isEmpty() ? host : ace;
+    }
+
     QString getHeadersString(const QStringList& headers) {
         QString result;
         if (headers.length()%2 != 0) {

@@ -170,10 +170,10 @@ namespace Configs {
             object["headers"] = qStringListToJsonObject(headers);
         }
         if (!host.isEmpty()) {
-            if (type == "http" || type == "httpupgrade") object["host"] = host;
+            if (type == "http" || type == "httpupgrade") object["host"] = toAceHost(host);
             if (type == "ws") {
                 auto headersObj = object["headers"].isObject() ? object["headers"].toObject() : QJsonObject();
-                headersObj["Host"] = host;
+                headersObj["Host"] = toAceHost(host);
                 object["headers"] = headersObj;
             }
         }
@@ -192,8 +192,9 @@ namespace Configs {
     BuildResult Transport::Build()
     {
         auto object = ExportToJson();
-        if (type == "http" && host.contains(',')) {
-            auto hosts = host.split(',', Qt::SkipEmptyParts);
+        // value(), never operator[]: the mutable operator[] inserts a null entry for a missing key
+        if (const auto exported = object.value("host").toString(); type == "http" && exported.contains(',')) {
+            auto hosts = exported.split(',', Qt::SkipEmptyParts);
             for (auto& item : hosts) item = item.trimmed();
             object["host"] = QListStr2QJsonArray(hosts);
         }

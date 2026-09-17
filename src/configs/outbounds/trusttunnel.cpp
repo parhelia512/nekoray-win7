@@ -75,7 +75,7 @@ namespace Configs {
                     if (haveAddress) break;
                     const QUrl address("tt://" + text);
                     if (!address.isValid() || address.host().isEmpty()) return false;
-                    server = address.host();
+                    server = address.host(QUrl::FullyEncoded);
                     server_port = address.port(443);
                     haveAddress = true;
                     break;
@@ -182,7 +182,7 @@ namespace Configs {
             object["quic"] = quic;
             if (!congestion_control.isEmpty()) object["quic_congestion_control"] = congestion_control;
         }
-        if (!custom_sni.isEmpty()) object["custom_sni"] = custom_sni;
+        if (!custom_sni.isEmpty()) object["custom_sni"] = toAceHost(custom_sni);
         if (!client_random.isEmpty()) object["client_random"] = client_random;
         if (tls->enabled) object["tls"] = tls->ExportToJson();
         return object;
@@ -200,7 +200,7 @@ namespace Configs {
             object["quic"] = quic;
             if (!congestion_control.isEmpty()) object["quic_congestion_control"] = congestion_control;
         }
-        if (!custom_sni.isEmpty()) object["custom_sni"] = custom_sni;
+        if (!custom_sni.isEmpty()) object["custom_sni"] = toAceHost(custom_sni);
         if (!client_random.isEmpty()) object["client_random"] = client_random;
         if (tls->enabled) {
             auto tlsObject = tls->Build().object;
