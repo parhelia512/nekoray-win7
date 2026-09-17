@@ -779,7 +779,6 @@ QToolButton::menu-indicator {
     <addaction name="actionAuto_Selector"/>
     <addaction name="menu_open_dashboard"/>
     <addaction name="actionSpeedtest_Current"/>
-    <addaction name="actionUpdate_Rule_Sets"/>
     <addaction name="separator"/>
     <addaction name="menu_otp_manager"/>
     <addaction name="separator"/>

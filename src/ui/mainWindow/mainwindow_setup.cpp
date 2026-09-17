@@ -818,7 +818,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     connect(ui->menuTools, &QMenu::aboutToShow, this, [=,this](){
         ui->actionSpeedtest_Current->setEnabled(running != nullptr);
-        ui->actionUpdate_Rule_Sets->setEnabled(running != nullptr && !m_ruleSetUpdateBusy);
     });
 
     connect(ui->actionAdd_New_Group, &QAction::triggered, this, [=,this]{
@@ -919,6 +918,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
             });
             profilesMenu->addAction(action);
         }
+
+        ui->actionUpdate_Rule_Sets->setEnabled(running != nullptr && !m_ruleSetUpdateBusy);
+        ui->menuRouting_Menu->addAction(ui->actionUpdate_Rule_Sets);
 
         ui->menuRouting_Menu->addSeparator();
         for (const auto& route : Configs::dataManager->routesRepo->GetAllRouteProfiles())
