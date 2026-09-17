@@ -265,6 +265,7 @@ private:
     bool m_profileConnecting = false;
     bool m_profileDisconnecting = false;
     bool m_xrayGeoAssetBusy = false;
+    bool m_ruleSetUpdateBusy = false;
     QString traffic_update_cache;
     qint64 last_test_time = 0;
     int proxy_last_order = -1;

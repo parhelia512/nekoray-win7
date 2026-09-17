@@ -140,6 +140,7 @@ var handlers = map[string]handlerFn{
 	"CancelVPNChallenge":  handle(globalServer.CancelVPNChallenge),
 	"CaptureDiagnostics":  handle(globalServer.CaptureDiagnostics),
 	"StopDiagnostics":     handle(globalServer.StopDiagnostics),
+	"UpdateRuleSets":      handle(globalServer.UpdateRuleSets),
 }
 
 func dispatch(methodName string, payload []byte) ([]byte, error) {

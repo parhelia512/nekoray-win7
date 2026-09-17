@@ -40,6 +40,8 @@ service LibcoreService {
   //
   rpc CaptureDiagnostics(DiagnosticsRequest) returns (DiagnosticsResponse);
   rpc StopDiagnostics(EmptyReq) returns (EmptyResp);
+
+  rpc UpdateRuleSets(EmptyReq) returns (UpdateRuleSetsResponse);
 }
 
 message EmptyReq {}
@@ -451,4 +453,9 @@ message DiagnosticsRequest {
 message DiagnosticsResponse {
   optional string error = 1 [default = ""];
   optional bytes archive = 2;
+}
+
+message UpdateRuleSetsResponse {
+  optional int32 updated = 1 [default = 0];
+  optional string error = 2 [default = ""];
 }
