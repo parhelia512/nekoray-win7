@@ -44,6 +44,7 @@ curl -fsSL https://raw.githubusercontent.com/throneproj/Throne/dev/script/instal
 - MASQUE
 - SSH
 - Xray VLESS
+- OpenVPN/OpenConnect
 - Custom Outbound (Both Sing-box and Xray)
 - Custom Config (Both Sing-box and Xray)
 - Chaining outbounds
