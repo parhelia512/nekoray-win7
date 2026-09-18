@@ -197,6 +197,10 @@ bool MainWindow::get_elevated_permissions(ExitReason reason) {
         return true;
     }
     if (Configs::IsAdmin()) return true;
+#ifdef NKR_ELEVATION_HINT
+    MessageBoxWarning(software_name, tr("This installation cannot grant the core privileges by itself.") + "\n\n" + NKR_ELEVATION_HINT);
+    return false;
+#endif
 #ifdef Q_OS_LINUX
     if (!Linux_HavePkexec()) {
         MessageBoxWarning(software_name, "Please install \"pkexec\" first.");

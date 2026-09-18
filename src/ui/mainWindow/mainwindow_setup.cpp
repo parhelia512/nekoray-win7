@@ -197,8 +197,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     runOnNewThread([=, this] {GetDeviceDetails(); });
 
-    auto core_path = QApplication::applicationDirPath() + "/";
-    core_path += "ThroneCore";
+    auto core_path = Configs::FindCoreRealPath();
 
     bool coreDebugMode = (Configs::dataManager->settingsRepo->log_level == "debug");
 

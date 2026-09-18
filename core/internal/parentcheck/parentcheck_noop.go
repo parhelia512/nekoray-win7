@@ -1,4 +1,4 @@
-//go:build debug && !noparentcheck
+//go:build noparentcheck
 
 package parentcheck
 
