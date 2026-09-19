@@ -14,7 +14,6 @@ jobs:
       contents: read
     strategy:
       matrix:
-        # windowslegacy runs the darwin host toolchain from go.zip; keep it on macOS.
         include:
           - cross_os: windows
             cross_arch: amd64
@@ -129,7 +128,6 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       DEST: ${{ github.workspace }}/deployment/android
-      # r28+ links 16 KB page-aligned by default, which Android 15 requires; gomobile passes no page-size flag itself.
       NDK_VERSION: "28.2.13676358"
     steps:
       - name: Checking out sources
@@ -245,7 +243,6 @@ jobs:
       DEST: ${{ github.workspace }}/deployment/${{ matrix.dest_suffix }}
       DEST_SUFFIX: ${{ matrix.dest_suffix }}
       ARCH: ${{ matrix.target }}
-      # Unquoted at the cmake call sites so it word-splits into two flags.
       LAUNCHER_ARGS: ${{ matrix.launcher != '' && format('-DCMAKE_C_COMPILER_LAUNCHER={0} -DCMAKE_CXX_COMPILER_LAUNCHER={0}', matrix.launcher) || '' }}
     steps:
       - name: Checking out sources
@@ -444,7 +441,6 @@ jobs:
           pattern: Pack-${{ github.sha }}-*
           merge-multiple: true
           path: deployment
-      # Lands flat in deployment, so ghr attaches ThroneCore.aar to the release like the packed builds.
       - name: Download Android AAR
         uses: actions/download-artifact@v8.0.1
         with:
