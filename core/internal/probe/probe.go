@@ -9,13 +9,17 @@ import (
 	"sync"
 	"time"
 
-	"ThroneCore/internal/boxbox"
-
 	"github.com/Mahdi-zarei/speedtest-go/speedtest"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing/common/metadata"
 	"github.com/sagernet/sing/service"
 )
+
+// What a probe needs from an instance; *boxbox.Box and core/mobile's box handle both satisfy it.
+type Box interface {
+	Context() context.Context
+	Outbound() adapter.OutboundManager
+}
 
 const FetchServersTimeout = 8 * time.Second
 const MaxConcurrentTests = 100
@@ -115,7 +119,7 @@ func normalizeConcurrency(maxConcurrency int) int {
 }
 
 // One result per tag, in the order given. Cancelling ctx aborts tags not yet started.
-func runBatch[T any](ctx context.Context, i *boxbox.Box, outboundTags []string, maxConcurrency int, probe batchProbe[T]) []*T {
+func runBatch[T any](ctx context.Context, i Box, outboundTags []string, maxConcurrency int, probe batchProbe[T]) []*T {
 	outbounds := service.FromContext[adapter.OutboundManager](i.Context())
 	resMap := make(map[string]*T, len(outboundTags))
 	var resAccess sync.Mutex
@@ -239,7 +243,7 @@ func outboundHTTPClient(ctx context.Context, outbound adapter.Outbound) (*http.C
 }
 
 // Endpoint membership, not a type assertion: plain outbounds such as direct also satisfy adapter.Endpoint.
-func tunnelEndpoints(i *boxbox.Box, tag string) []adapter.Endpoint {
+func tunnelEndpoints(i Box, tag string) []adapter.Endpoint {
 	outbounds := i.Outbound()
 	endpoints := service.FromContext[adapter.EndpointManager](i.Context())
 	visited := make(map[string]bool)
@@ -314,7 +318,7 @@ func (h *tunnelHandshake) await(ctx context.Context) error {
 	}
 }
 
-func awaitTunnels(ctx context.Context, i *boxbox.Box, tag string) error {
+func awaitTunnels(ctx context.Context, i Box, tag string) error {
 	ctx, cancel := context.WithTimeout(ctx, TunnelHandshakeTimeout)
 	defer cancel()
 	for _, endpoint := range tunnelEndpoints(i, tag) {
@@ -329,7 +333,7 @@ func awaitTunnels(ctx context.Context, i *boxbox.Box, tag string) error {
 	return nil
 }
 
-func firstRequestTimeout(i *boxbox.Box, tag string, cold bool, timeout time.Duration) time.Duration {
+func firstRequestTimeout(i Box, tag string, cold bool, timeout time.Duration) time.Duration {
 	if !cold {
 		return timeout
 	}

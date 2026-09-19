@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"ThroneCore/internal/boxbox"
-
 	"github.com/sagernet/sing-box/adapter"
 )
 
@@ -20,7 +18,7 @@ type URLTestResult struct {
 	Error    error
 }
 
-func BatchURLTest(ctx context.Context, i *boxbox.Box, outboundTags []string, url string, maxConcurrency int, twice bool, timeout time.Duration) []*URLTestResult {
+func BatchURLTest(ctx context.Context, i Box, outboundTags []string, url string, maxConcurrency int, twice bool, timeout time.Duration) []*URLTestResult {
 	if timeout <= 0 {
 		timeout = URLTestTimeout
 	}

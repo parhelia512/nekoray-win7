@@ -123,6 +123,47 @@ jobs:
           name: Throne-${{ github.sha }}-Common-${{ matrix.cross_os }}-${{ matrix.cross_arch }}
           path: artifacts.tgz
           compression-level: 0
+  build-android:
+    permissions:
+      contents: read
+    runs-on: ubuntu-22.04
+    env:
+      DEST: ${{ github.workspace }}/deployment/android
+      # r28+ links 16 KB page-aligned by default, which Android 15 requires; gomobile passes no page-size flag itself.
+      NDK_VERSION: "28.2.13676358"
+    steps:
+      - name: Checking out sources
+        uses: actions/checkout@v7.0.1
+      - name: Install Golang
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version: "1.27.0"
+          cache-dependency-path: |
+            core/go.sum
+      - name: Install JDK 17
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install Android NDK
+        run: |
+          set -xeuo pipefail
+          echo y | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+      - name: Install gomobile
+        run: |
+          go install github.com/sagernet/gomobile/cmd/gomobile@v0.1.13
+          go install github.com/sagernet/gomobile/cmd/gobind@v0.1.13
+      - name: Build Android AAR
+        shell: bash
+        run: ./script/build_android.sh
+      - name: Uploading Artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: ThroneCore-android-${{ github.sha }}
+          path: deployment/android/ThroneCore.aar
+          if-no-files-found: error
+          compression-level: 0
   build-cpp:
     permissions:
       contents: read
@@ -390,6 +431,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - pack
+      - build-android
     permissions:
       contents: write
       actions: read
@@ -401,6 +443,12 @@ jobs:
         with:
           pattern: Pack-${{ github.sha }}-*
           merge-multiple: true
+          path: deployment
+      # Lands flat in deployment, so ghr attaches ThroneCore.aar to the release like the packed builds.
+      - name: Download Android AAR
+        uses: actions/download-artifact@v8.0.1
+        with:
+          name: ThroneCore-android-${{ github.sha }}
           path: deployment
       - name: Uploading Artifact
         uses: actions/upload-artifact@v7.0.1

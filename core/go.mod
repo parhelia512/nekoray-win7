@@ -7,6 +7,8 @@ require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/gofrs/uuid/v5 v5.5.1
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
+	github.com/miekg/dns v1.1.73
+	github.com/sagernet/gomobile v0.1.13
 	github.com/sagernet/sing v0.9.3
 	github.com/sagernet/sing-box v1.14.1-0.20260908150512-6d1fc214c16b
 	github.com/sagernet/sing-tun v0.9.1
@@ -99,7 +101,6 @@ require (
 	github.com/mdlayher/socket v0.6.0 // indirect
 	github.com/metacubex/utls v1.8.7 // indirect
 	github.com/mholt/acmez/v3 v3.1.6 // indirect
-	github.com/miekg/dns v1.1.73 // indirect
 	github.com/mitchellh/go-ps v1.0.0 // indirect
 	github.com/openai/openai-go/v3 v3.26.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect

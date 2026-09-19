@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"ThroneCore/internal/boxbox"
-
 	"github.com/sagernet/sing-box/adapter"
 )
 
@@ -28,7 +26,7 @@ type IPTestResult struct {
 	Error  error
 }
 
-func BatchIPTest(ctx context.Context, i *boxbox.Box, outboundTags []string, maxConcurrency int, cold bool, timeout time.Duration) []*IPTestResult {
+func BatchIPTest(ctx context.Context, i Box, outboundTags []string, maxConcurrency int, cold bool, timeout time.Duration) []*IPTestResult {
 	if timeout <= 0 {
 		timeout = IPTestTimeout
 	}

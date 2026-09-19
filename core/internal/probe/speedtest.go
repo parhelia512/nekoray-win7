@@ -11,8 +11,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"ThroneCore/internal/boxbox"
-
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing/service"
 )
@@ -79,7 +77,7 @@ func countryTest(ctx context.Context, dialer func(ctx context.Context, network s
 	return nil
 }
 
-func BatchSpeedTest(ctx context.Context, i *boxbox.Box, outboundTags []string, testDl, testUl bool, simpleDL bool, simpleAddress string, timeout time.Duration, countryOnly bool, countryConcurrency int32) []*SpeedTestResult {
+func BatchSpeedTest(ctx context.Context, i Box, outboundTags []string, testDl, testUl bool, simpleDL bool, simpleAddress string, timeout time.Duration, countryOnly bool, countryConcurrency int32) []*SpeedTestResult {
 	outbounds := service.FromContext[adapter.OutboundManager](i.Context())
 	results := make([]*SpeedTestResult, 0, len(outboundTags))
 	var queuer chan struct{}
