@@ -63,6 +63,7 @@ namespace Configs {
             constexpr auto xrayFullConfigIn = "throne-bridge";
 
             constexpr auto adblockRuleSet = "throne-adblocksingbox";
+            constexpr auto privateRangesRuleSet = "throne-private-ranges";
 
             constexpr auto mainChainPrefix = "config";
             constexpr auto routeChainPrefix = "route";
@@ -144,8 +145,8 @@ namespace Configs {
         struct TunDeps {
             QJsonArray directIPSets;
             QJsonArray directIPCIDRs;
-            // Private ranges the route profile aims somewhere other than direct, so the Tun carries them.
-            QSet<QString> hijackedPrivateRanges;
+            QStringList bypassedPrivateRanges;
+            bool privateRangesAsRuleSet = false;
         };
 
         struct RoutingDeps {
@@ -730,10 +731,17 @@ namespace Configs {
                 .ipCIDRs = &preReqs.tun.directIPCIDRs,
             });
 
-            for (const auto &cidr : routeChain->get_hijacked_ips()) {
+            if (!settings.disable_private_range_bypass) {
+                const auto hijackedIPs = routeChain->get_hijacked_ips();
+                // sing-tun keeps an excluded range out of the Tun entirely, so a rule aimed at one never fires (#1741).
                 for (const auto &range : settings.vpn_private_ranges) {
-                    if (prefixesOverlap(range, cidr)) preReqs.tun.hijackedPrivateRanges << range;
+                    const bool hijacked = std::any_of(hijackedIPs.cbegin(), hijackedIPs.cend(),
+                        [&range](const QString &cidr) { return prefixesOverlap(range, cidr); });
+                    if (!hijacked) preReqs.tun.bypassedPrivateRanges << range;
                 }
+                // auto_redirect hijacks DNS after static excludes but before address-set ones (#1895); a verbatim raw route cannot host the set.
+                preReqs.tun.privateRangesAsRuleSet = ctx.tunEnabled && ctx.os == Linux && settings.vpn_auto_redirect &&
+                    !preReqs.tun.bypassedPrivateRanges.isEmpty() && !(routeChain->isRaw && routeChain->preventModifications);
             }
 
             auto extraCoreEnt = resolveExtraCoreProfile(ctx.ent);
@@ -1147,16 +1155,14 @@ namespace Configs {
                 if (settings.vpn_ipv6) tunAddress += tunIPv6CIDR;
                 inboundObj["address"] = tunAddress;
 
-                // sing-tun subtracts route_exclude_address from the routes it installs, so a rule aimed at an excluded range never fires (#1741).
                 QJsonArray routeExcludeAddrs;
                 QStringList excludedRanges;
                 if (!settings.disable_private_range_bypass) {
                     routeExcludeAddrs = {"127.0.0.0/8", "255.255.255.255/32"};
-                    for (const auto &range : settings.vpn_private_ranges) {
-                        if (!tun.hijackedPrivateRanges.contains(range)) excludedRanges << range;
-                    }
+                    if (!tun.privateRangesAsRuleSet) excludedRanges = tun.bypassedPrivateRanges;
                 }
                 QJsonArray routeExcludeSets;
+                if (tun.privateRangesAsRuleSet) routeExcludeSets << tags::privateRangesRuleSet;
                 if (settings.enable_tun_routing)
                 {
                     for (auto item: tun.directIPCIDRs) excludedRanges << item.toString();
@@ -1932,6 +1938,14 @@ namespace Configs {
                             {"tag", tags::adblockRuleSet},
                             {"format", "binary"},
                             {"url", get_jsdelivr_link("https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/adblocksingbox.srs")},
+                        };
+            }
+
+            if (const auto &tun = ctx.prerequisites.tun; tun.privateRangesAsRuleSet) {
+                ruleSetArray += QJsonObject{
+                            {"type", "inline"},
+                            {"tag", tags::privateRangesRuleSet},
+                            {"rules", QJsonArray{QJsonObject{{"ip_cidr", QJsonArray::fromStringList(tun.bypassedPrivateRanges)}}}},
                         };
             }
             return ruleSetArray;

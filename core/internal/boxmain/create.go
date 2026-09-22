@@ -25,7 +25,7 @@ func parseConfig(ctx context.Context, configContent []byte) (*option.Options, er
 }
 
 // onCreated runs between New and Start: the Xray sidecars start first and resolve through this box.
-func Create(configContent []byte, onCreated func(*boxbox.Box)) (*boxbox.Box, context.CancelFunc, error) {
+func Create(configContent []byte, onCreated func(*boxbox.Box), adjust ...func(*option.Options)) (*boxbox.Box, context.CancelFunc, error) {
 	// Fresh context per call: concurrent boxes sharing one service.Registry clobber each other's OutboundManager.
 	ctx := newBoxContext()
 	options, err := parseConfig(ctx, configContent)
@@ -37,6 +37,9 @@ func Create(configContent []byte, onCreated func(*boxbox.Box)) (*boxbox.Box, con
 			options.Log = &option.LogOptions{}
 		}
 		options.Log.DisableColor = true
+	}
+	for _, fn := range adjust {
+		fn(options)
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	instance, err := boxbox.New(boxbox.Options{
