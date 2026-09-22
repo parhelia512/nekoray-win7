@@ -22,9 +22,9 @@ require (
 
 replace github.com/xtls/xray-core => github.com/throneproj/xray-core v1.251015.1-0.20260909120523-7b26dbd842dc
 
-replace github.com/sagernet/sing-box => github.com/throneproj/sing-box v1.11.16-0.20260922024412-623a3ce0fb81
+replace github.com/sagernet/sing-box => github.com/throneproj/sing-box v1.11.16-0.20260922234629-af99ee4fc5d6
 
-replace github.com/sagernet/wireguard-go => github.com/throneproj/wireguard-go v0.0.0-20260922015959-c9380bb0c37c
+replace github.com/sagernet/wireguard-go => github.com/throneproj/wireguard-go v0.0.0-20260922234409-f60e4eda0d08
 
 replace github.com/sagernet/sing => github.com/throneproj/sing v0.9.4-0.20260922020918-4e0ee1952d35
 
