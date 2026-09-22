@@ -25,6 +25,10 @@ case "$GOOS" in
   darwin)
     TAGS+=",with_naive_outbound"
     export CGO_ENABLED=1 CGO_LDFLAGS="-weak_framework UniformTypeIdentifiers"
+    # cgo otherwise builds for the runner's SDK and hard-links every API newer than 10.15
+    if $IS_LEGACY; then
+      export MACOSX_DEPLOYMENT_TARGET=10.15
+    fi
     ;;
   linux)
     TAGS+=",with_naive_outbound"
