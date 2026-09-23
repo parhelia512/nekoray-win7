@@ -523,6 +523,7 @@ set(PROJECT_SOURCES
         include/database/OtpProfilesRepo.h
         include/database/SettingsRepo.h
         include/database/TrafficStatsRepo.h
+        include/database/MarkersRepo.h
 
         include/database/entities/Profile.h
         include/database/entities/Group.h
@@ -541,6 +542,7 @@ set(PROJECT_SOURCES
         src/database/RoutesRepo.cpp
         src/database/OtpProfilesRepo.cpp
         src/database/TrafficStatsRepo.cpp
+        src/database/MarkersRepo.cpp
 
         include/database/DatabaseManager.h
         src/database/DatabaseManager.cpp

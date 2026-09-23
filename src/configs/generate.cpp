@@ -1169,8 +1169,11 @@ namespace Configs {
                     for (auto item: tun.directIPSets) routeExcludeSets << item;
                 }
 
-                // macOS puts the system DNS inside the Tun subnet, so bypassing that range black-holes every query (#1738).
-                if (ctx.os == Darwin) excludedRanges = subtractPrefix(excludedRanges, tunIPv4CIDR);
+                // On macOS a bypass covering the Tun subnet black-holes the system DNS and the system stack's replies (#1738).
+                if (ctx.os == Darwin) {
+                    excludedRanges = subtractPrefix(excludedRanges, tunIPv4CIDR);
+                    if (settings.vpn_ipv6) excludedRanges = subtractPrefix(excludedRanges, tunIPv6CIDR);
+                }
                 for (const auto &range : excludedRanges) routeExcludeAddrs << range;
                 inboundObj["route_exclude_address"] = routeExcludeAddrs;
                 if (!routeExcludeSets.isEmpty()) inboundObj["route_exclude_address_set"] = routeExcludeSets;
