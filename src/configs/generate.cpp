@@ -695,7 +695,7 @@ namespace Configs {
             }
 
             for (const auto &item: *neededRuleSets) {
-                preReqs.routing.neededRuleSets << item;
+                if (!preReqs.routing.neededRuleSets.contains(item)) preReqs.routing.neededRuleSets << item;
             }
 
             if (settings.enable_dns_routing) {
