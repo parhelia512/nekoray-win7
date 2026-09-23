@@ -556,7 +556,8 @@ namespace Configs {
         {
             action = scalar;
         }
-        if (fieldName == "method")
+        // get_rule_json writes "reject_method", so shares and remote profiles arrive with that key.
+        if (fieldName == "method" || fieldName == "reject_method")
         {
             rejectMethod = scalar;
         }
