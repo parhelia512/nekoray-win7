@@ -27,6 +27,8 @@ namespace Configs {
     int getOutboundID(const QString& name) {
         if (name == "proxy") return -1;
         if (name == "direct") return -2;
+        if (name == "block") return blockID;
+        if (name == "warp-bypass") return warpBypassID;
         if (const auto &profile = Configs::dataManager->profilesRepo->GetProfileByName(name)) return profile->id;
 
         return INVALID_ID;
@@ -186,6 +188,13 @@ namespace Configs {
         if (warnings) warnings->append(msg + "\n");
     }
 
+    // toString() is "" for a number, and the writer emits ports, ip_version and override_port as numbers.
+    static QString jsonScalarText(const QJsonValue& val) {
+        if (!val.isDouble()) return val.toString();
+        const qint64 whole = val.toInteger();
+        return static_cast<double>(whole) == val.toDouble() ? QString::number(whole) : QString::number(val.toDouble());
+    }
+
     // name/type are schema-only keys: skipped here, applied by the caller.
     static std::shared_ptr<RouteRule> parse_rule_object(const QJsonObject& obj, QString* warnings) {
         auto rule = std::make_shared<RouteRule>();
@@ -211,9 +220,11 @@ namespace Configs {
                     }
                 }
             } else if (val.isArray()) {
-                rule->set_field_value(key, QJsonArray2QListString(val.toArray()));
-            } else if (val.isString()) {
-                rule->set_field_value(key, {val.toString()});
+                QStringList items;
+                for (const auto& item: val.toArray()) items << jsonScalarText(item);
+                rule->set_field_value(key, items);
+            } else if (val.isString() || val.isDouble()) {
+                rule->set_field_value(key, {jsonScalarText(val)});
             } else if (val.isBool()) {
                 rule->set_field_value(key, {val.toBool() ? "true":"false"});
             }

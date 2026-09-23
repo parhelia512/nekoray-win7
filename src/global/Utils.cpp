@@ -284,6 +284,8 @@ void ShowPassiveWarning(const QString &title, const QString &text) {
         return;
     }
     box = new QMessageBox(QMessageBox::Warning, title, text, QMessageBox::Ok, GetMessageBoxParent());
+    // Callers embed foreign text (adapter names, SQLite messages); AutoText would render a tag-like one as HTML.
+    box->setTextFormat(Qt::PlainText);
     box->setAttribute(Qt::WA_DeleteOnClose);
     box->setWindowModality(Qt::NonModal);
     box->show();

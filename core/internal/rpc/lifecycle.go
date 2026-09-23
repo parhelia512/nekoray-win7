@@ -166,6 +166,10 @@ func (s *server) Start(ctx context.Context, in *gen.LoadConfigReq) (out *gen.Err
 		needUnsetDNS = true
 	}
 
+	if in.GetTunIpv4Cidr() != "" {
+		stopEgressForwardingWatch = watchEgressForwarding(box.Network())
+	}
+
 	return
 }
 
@@ -185,6 +189,11 @@ func (s *server) Stop(ctx context.Context, in *gen.EmptyReq) (out *gen.ErrorResp
 	box, cancel := currentInstance()
 	if box == nil {
 		return
+	}
+
+	if stopEgressForwardingWatch != nil {
+		stopEgressForwardingWatch()
+		stopEgressForwardingWatch = nil
 	}
 
 	if needUnsetDNS {
