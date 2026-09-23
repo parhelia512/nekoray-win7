@@ -92,8 +92,8 @@ jobs:
         run: |
           set -xeuo pipefail
           git init ~/cronet-go
-          git -C ~/cronet-go remote add origin https://github.com/parhelia512/cronet-go.git
-          git -C ~/cronet-go fetch --depth=1 origin "9ed95366ae2f9b4b994cf54f8f9de0d8bc350057"
+          git -C ~/cronet-go remote add origin https://github.com/throneproj/cronet-go.git
+          git -C ~/cronet-go fetch --depth=1 origin "2ee86b72426042457b8eb879ab32296f5752bf2f"
           git -C ~/cronet-go checkout FETCH_HEAD
           git -C ~/cronet-go submodule update --init --recursive --depth=1
       - name: Download Chromium toolchain
