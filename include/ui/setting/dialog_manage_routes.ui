@@ -135,6 +135,19 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_7">
        <item>
+        <widget class="QLabel" name="hijack_deprecated">
+         <property name="colorRole" stdset="0">
+          <string notr="true">danger</string>
+         </property>
+         <property name="text">
+          <string>Hijack is deprecated and will be removed in the next release. Tun mode covers the same use case.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QGroupBox" name="hijack_box">
          <property name="title">
           <string>DNS Server</string>

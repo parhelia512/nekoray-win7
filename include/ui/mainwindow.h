@@ -491,6 +491,8 @@ private:
 
     bool set_system_dns(bool set, bool save_set = true);
 
+    void showHijackDeprecationNotice();
+
     void CheckUpdate();
 
     void OpenDashboard();

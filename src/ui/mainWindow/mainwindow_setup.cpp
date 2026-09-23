@@ -1118,6 +1118,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     if (!Configs::dataManager->settingsRepo->flag_tray) show();
     else if (tray->isVisible()) HideWindow(this);
+    // Deferred: GetMessageBoxParent() falls back to the mainwindow global, which is only set once this constructor returns.
+    QTimer::singleShot(0, this, &MainWindow::showHijackDeprecationNotice);
 
     ui->data_view->setStyleSheet("background: transparent; border: none;");
 
