@@ -74,6 +74,9 @@ type Instance struct {
 	statusSampled     bool
 	lastUplinkTotal   int64
 	lastDownlinkTotal int64
+
+	outboundTrafficAccess sync.Mutex
+	outboundTraffic       map[string]pendingTraffic
 }
 
 // Mirrors rpc.Start + boxmain.Create: Xray first, then the box, whose ctx is published to the Xray

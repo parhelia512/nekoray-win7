@@ -87,19 +87,35 @@ func (i *Instance) Status() *StatusMessage {
 	return status
 }
 
-// Cumulative bytes of one outbound or endpoint tag; direction is "uplink" or "downlink".
+type pendingTraffic struct {
+	uplink   int64
+	downlink int64
+}
+
+// Bytes of one outbound or endpoint tag since the previous read of that direction; direction is "uplink" or
+// "downlink". TotalOutbound zeroes both of the tag's counters, so the direction not asked for is kept for its own read.
 func (i *Instance) QueryOutboundStats(tag string, direction string) int64 {
 	if i.traffic == nil {
 		return 0
 	}
+	i.outboundTrafficAccess.Lock()
+	defer i.outboundTrafficAccess.Unlock()
 	uplink, downlink := i.traffic.TotalOutbound(tag)
+	pending := i.outboundTraffic[tag]
+	pending.uplink += uplink
+	pending.downlink += downlink
+	var value int64
 	switch direction {
 	case "uplink", "up", "upload":
-		return uplink
+		value, pending.uplink = pending.uplink, 0
 	case "downlink", "down", "download":
-		return downlink
+		value, pending.downlink = pending.downlink, 0
 	}
-	return 0
+	if i.outboundTraffic == nil {
+		i.outboundTraffic = make(map[string]pendingTraffic)
+	}
+	i.outboundTraffic[tag] = pending
+	return value
 }
 
 func (i *Instance) Groups() OutboundGroupIterator {
