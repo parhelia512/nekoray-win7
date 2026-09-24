@@ -9,9 +9,10 @@ import (
 	box "github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/adapter"
 	E "github.com/sagernet/sing/common/exceptions"
+	"github.com/sagernet/sing/service"
 )
 
-const urlTestReportInterval = 200 * time.Millisecond
+const testReportInterval = 200 * time.Millisecond
 
 var errInstanceNotRunning = E.New("instance is not running")
 
@@ -37,10 +38,16 @@ type TestRequest struct {
 
 	tags            []string
 	xrayFullConfigs []string
+	vpnEndpointTags []string
 }
 
 func (r *TestRequest) AddOutboundTag(tag string) {
 	r.tags = append(r.tags, tag)
+}
+
+// URL tests only: an OpenVPN/OpenConnect endpoint tag whose tunnel state is reported when its test fails.
+func (r *TestRequest) AddVPNEndpointTag(tag string) {
+	r.vpnEndpointTags = append(r.vpnEndpointTags, tag)
 }
 
 func (r *TestRequest) AddXrayFullConfig(config string) {
@@ -49,6 +56,9 @@ func (r *TestRequest) AddXrayFullConfig(config string) {
 
 type URLTestHandler interface {
 	OnResult(tag string, latencyMs int32, err string)
+	// After the results, once per AddVPNEndpointTag tag whose test failed: whether that tunnel is up anyway (the
+	// desktop's TestResp.vpn_status).
+	OnVPNStatus(tag string, connected bool, state string, err string)
 	OnDone()
 }
 
@@ -171,18 +181,22 @@ func errorString(err error) string {
 	return err.Error()
 }
 
-// Results reach the handler as they land, the way the desktop polls QueryURLTest, by draining the
-// probe reporter while the batch runs; the batch's return value then fills in whatever the drain
-// missed (aborted tags are never published to the reporter).
-type urlTestReporter struct {
-	handler  URLTestHandler
+// Results reach the handler as they land, the way the desktop polls QueryURLTest / QueryIPTest / QueryCountryTest,
+// by draining the probe's result buffer while the batch runs; the batch's return value then fills in whatever the
+// drain missed (aborted tags are never published to the buffer).
+type testReporter[T any] struct {
+	source   func() []*T
+	tagOf    func(*T) string
+	emit     func(*T)
 	tags     map[string]struct{}
 	reported map[string]struct{}
 }
 
-func newURLTestReporter(tags []string, handler URLTestHandler) *urlTestReporter {
-	reporter := &urlTestReporter{
-		handler:  handler,
+func newTestReporter[T any](tags []string, source func() []*T, tagOf func(*T) string, emit func(*T)) *testReporter[T] {
+	reporter := &testReporter[T]{
+		source:   source,
+		tagOf:    tagOf,
+		emit:     emit,
 		tags:     make(map[string]struct{}, len(tags)),
 		reported: make(map[string]struct{}, len(tags)),
 	}
@@ -192,32 +206,33 @@ func newURLTestReporter(tags []string, handler URLTestHandler) *urlTestReporter 
 	return reporter
 }
 
-func (r *urlTestReporter) report(result *probe.URLTestResult) {
+func (r *testReporter[T]) report(result *T) {
 	if result == nil {
 		return
 	}
-	if _, ours := r.tags[result.Tag]; !ours {
+	tag := r.tagOf(result)
+	if _, ours := r.tags[tag]; !ours {
 		return
 	}
-	if _, done := r.reported[result.Tag]; done {
+	if _, done := r.reported[tag]; done {
 		return
 	}
-	r.reported[result.Tag] = struct{}{}
-	r.handler.OnResult(result.Tag, int32(result.Duration.Milliseconds()), errorString(result.Error))
+	r.reported[tag] = struct{}{}
+	r.emit(result)
 }
 
-func (r *urlTestReporter) drain() {
-	for _, result := range probe.URLReporter.Results() {
+func (r *testReporter[T]) drain() {
+	for _, result := range r.source() {
 		r.report(result)
 	}
 }
 
-func (r *urlTestReporter) run(batch func() []*probe.URLTestResult) {
+func (r *testReporter[T]) run(batch func() []*T) {
 	stop := make(chan struct{})
 	stopped := make(chan struct{})
 	go func() {
 		defer close(stopped)
-		ticker := time.NewTicker(urlTestReportInterval)
+		ticker := time.NewTicker(testReportInterval)
 		defer ticker.Stop()
 		for {
 			select {
@@ -235,6 +250,27 @@ func (r *urlTestReporter) run(batch func() []*probe.URLTestResult) {
 	for _, result := range results {
 		r.report(result)
 	}
+}
+
+// The desktop's collectVPNStatus without a wait, reduced to what a URL test verdict needs.
+func vpnEndpointVerdict(box probe.Box, tag string) (connected bool, state string, err string) {
+	endpoints := service.FromContext[adapter.EndpointManager](box.Context())
+	if endpoints == nil {
+		return false, "", "nil endpoint manager"
+	}
+	found, loaded := endpoints.Get(tag)
+	if !loaded {
+		return false, "", "endpoint not found: " + tag
+	}
+	switch typed := found.(type) {
+	case adapter.OpenVPNEndpoint:
+		status := typed.OpenVPNStatus()
+		return status.State == adapter.OpenVPNStateConnected && status.TunnelInfo != nil, status.State, status.Error
+	case adapter.OpenConnectEndpoint:
+		status := typed.OpenConnectStatus()
+		return status.State == adapter.OpenConnectStateConnected && status.TunnelInfo != nil, status.State, status.Error
+	}
+	return false, "", "endpoint is not an openvpn/openconnect client: " + tag
 }
 
 // current is only consulted when request.TestCurrent is set; platform wires protect, the interface
@@ -255,9 +291,23 @@ func StartURLTest(current *Instance, platform PlatformInterface, request *TestRe
 	go func() {
 		defer handler.OnDone()
 		defer env.close()
-		newURLTestReporter(env.tags, handler).run(func() []*probe.URLTestResult {
+		failed := make(map[string]bool, len(env.tags))
+		newTestReporter(env.tags, probe.URLReporter.Results,
+			func(result *probe.URLTestResult) string { return result.Tag },
+			func(result *probe.URLTestResult) {
+				failed[result.Tag] = result.Error != nil
+				handler.OnResult(result.Tag, int32(result.Duration.Milliseconds()), errorString(result.Error))
+			},
+		).run(func() []*probe.URLTestResult {
 			return probe.BatchURLTest(testCtx, env.box, env.tags, request.URL, int(request.MaxConcurrency), twice, timeout)
 		})
+		// A snapshot before the box closes: the probe already sat out the handshake.
+		for _, tag := range request.vpnEndpointTags {
+			if failed[tag] {
+				connected, state, err := vpnEndpointVerdict(env.box, tag)
+				handler.OnVPNStatus(tag, connected, state, err)
+			}
+		}
 	}()
 	return nil
 }
@@ -276,10 +326,14 @@ func StartIPTest(platform PlatformInterface, request *TestRequest, handler IPTes
 	go func() {
 		defer handler.OnDone()
 		defer env.close()
-		results := probe.BatchIPTest(testCtx, env.box, env.tags, int(request.MaxConcurrency), true, timeout)
-		for _, result := range results {
-			handler.OnResult(result.Tag, result.Result.IP, result.Result.CountryCode, errorString(result.Error))
-		}
+		newTestReporter(env.tags, probe.IPReporter.Results,
+			func(result *probe.IPTestResult) string { return result.Tag },
+			func(result *probe.IPTestResult) {
+				handler.OnResult(result.Tag, result.Result.IP, result.Result.CountryCode, errorString(result.Error))
+			},
+		).run(func() []*probe.IPTestResult {
+			return probe.BatchIPTest(testCtx, env.box, env.tags, int(request.MaxConcurrency), true, timeout)
+		})
 	}()
 	return nil
 }
@@ -316,12 +370,21 @@ func StartSpeedTest(current *Instance, platform PlatformInterface, request *Test
 	go func() {
 		defer handler.OnDone()
 		defer env.close()
-		results := probe.BatchSpeedTest(testCtx, env.box, env.tags,
-			request.TestDownload, request.TestUpload, request.SimpleDownload, request.SimpleDownloadAddr,
-			timeout, request.OnlyCountry, request.CountryConcurrency)
-		for _, result := range results {
-			handler.OnResult(flattenSpeedTestResult(*result, false))
+		emit := func(result *probe.SpeedTestResult) { handler.OnResult(flattenSpeedTestResult(*result, false)) }
+		batch := func() []*probe.SpeedTestResult {
+			return probe.BatchSpeedTest(testCtx, env.box, env.tags,
+				request.TestDownload, request.TestUpload, request.SimpleDownload, request.SimpleDownloadAddr,
+				timeout, request.OnlyCountry, request.CountryConcurrency)
 		}
+		if !request.OnlyCountry {
+			// The other modes measure one tag at a time and publish nothing before the batch returns.
+			for _, result := range batch() {
+				emit(result)
+			}
+			return
+		}
+		newTestReporter(env.tags, probe.CountryResults.Results,
+			func(result *probe.SpeedTestResult) string { return result.Tag }, emit).run(batch)
 	}()
 	return nil
 }

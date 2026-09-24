@@ -163,6 +163,17 @@ namespace Subscription {
             return parseSink;
         }
 
+        // A dry run, as the real parse inserts as it goes. Its diagnostics are held back: the real parse repeats them.
+        bool yieldsProfile(const QByteArray &body, QStringList &diagnostics) {
+            bool found = false;
+            ParseSink probe;
+            probe.profile = [&found](const std::shared_ptr<Configs::Profile> &) { found = true; };
+            probe.log = [&diagnostics](const QString &line) { diagnostics << line; };
+            probe.warn = [&diagnostics](const QString &title, const QString &text) { diagnostics << title + ": " + text; };
+            ParseDocument(body, probe);
+            return found;
+        }
+
         QString notice(const QStringList &names, const QString &prefix, const QString &action) {
             if (names.size() >= 1000) return QStringLiteral("%1 %2 %3\n").arg(prefix, action).arg(names.size());
             QString result;
@@ -489,6 +500,14 @@ namespace Subscription {
         QByteArray body;
         QString userInfo;
         if (!fetch(group->url.trimmed(), group->name, ResolveIdentity(group.get()), body, userInfo)) return;
+
+        // Not a single profile is far likelier a broken or blocked response than an emptied subscription: touch nothing.
+        QStringList diagnostics;
+        if (!yieldsProfile(body, diagnostics)) {
+            for (const auto &line : diagnostics) MW_show_log(line);
+            MW_show_log("<<<<<<<< " + QObject::tr("No profiles found in the subscription: %1 was left unchanged.").arg(group->name));
+            return;
+        }
 
         group->sub_last_update = QDateTime::currentMSecsSinceEpoch() / 1000;
         group->info = userInfo;
