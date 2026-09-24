@@ -30,6 +30,9 @@ public:
 
     void runUrlTests(const QList<int>& profileIDs, const std::function<void()>& onFinished = {});
 
+    // Waits out a running session instead of refusing it; returns at once and is safe from any thread.
+    void queueUrlTests(const QList<int>& profileIDs, const std::function<void()>& onFinished);
+
     void runIpTests(const QList<int>& profileIDs);
 
     void runSpeedTests(const QList<int>& profileIDs, bool testCurrent = false);
@@ -57,7 +60,7 @@ private:
     };
 
     void runLatencyGroup(LatencyKind kind, const QList<int>& requestedIDs,
-                         const std::function<void()>& onFinished);
+                         const std::function<void()>& onFinished, bool waitForSession = false);
 
     void runUrlProbe(const Target& target);
 

@@ -2422,8 +2422,13 @@ namespace Configs {
         return inner;
     }
 
-    bool IsValid(const std::shared_ptr<Profile>& ent)
+    bool IsValid(const std::shared_ptr<Profile>& ent, bool *coreUnreachable)
     {
+        const auto coreCallFailed = [coreUnreachable](const QString &resp) {
+            MW_show_log("Failed to Call the Core: " + resp);
+            if (coreUnreachable != nullptr) *coreUnreachable = true;
+            return false;
+        };
         if (ent->type == "autoselector")
         {
             const auto plan = PlanAutoSelector(ent);
@@ -2450,7 +2455,7 @@ namespace Configs {
                     MW_show_log("Null ent in validator");
                     return false;
                 }
-                if (!IsValid(e))
+                if (!IsValid(e, coreUnreachable))
                 {
                     MW_show_log("Invalid ent in chain: ID=" + QString::number(eId));
                     return false;
@@ -2484,11 +2489,7 @@ namespace Configs {
                 xrayConf.remove("inbounds");
                 bool ok;
                 auto resp = API::defaultClient->CheckConfig(&ok, QJsonObject2QString(xrayConf, true), true);
-                if (!ok)
-                {
-                    MW_show_log("Failed to Call the Core: " + resp);
-                    return false;
-                }
+                if (!ok) return coreCallFailed(resp);
                 if (resp.isEmpty()) return true;
                 // Left to fail at test time so handleXrayGeoAssetError() can name the missing category.
                 if (resp.contains("geoip.dat") || resp.contains("geosite.dat")) return true;
@@ -2510,11 +2511,7 @@ namespace Configs {
             };
             bool ok;
             auto resp = API::defaultClient->CheckConfig(&ok, QJsonObject2QString(xrayConf, true), true);
-            if (!ok)
-            {
-                MW_show_log("Failed to Call the Core: " + resp);
-                return false;
-            }
+            if (!ok) return coreCallFailed(resp);
             if (resp.isEmpty()) return true;
             MW_show_log("Invalid Xray ent " + ent->outbound->name + ": " + resp);
             return false;
@@ -2531,11 +2528,7 @@ namespace Configs {
         bool ok;
         conf.insert("log", QJsonObject{{"level", dataManager->settingsRepo->log_level}});
         auto resp = API::defaultClient->CheckConfig(&ok, QJsonObject2QString(conf, true));
-        if (!ok)
-        {
-            MW_show_log("Failed to Call the Core: " + resp);
-            return false;
-        }
+        if (!ok) return coreCallFailed(resp);
         if (resp.isEmpty()) return true;
         MW_show_log("Invalid ent " + ent->outbound->name + ": " + resp);
         return false;

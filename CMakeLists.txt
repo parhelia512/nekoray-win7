@@ -242,6 +242,9 @@ set(PROJECT_SOURCES
         include/ui/group/dialog_edit_group.h
         src/ui/group/dialog_edit_group.cpp
         include/ui/group/dialog_edit_group.ui
+        include/ui/group/dialog_edit_group_advanced.h
+        src/ui/group/dialog_edit_group_advanced.cpp
+        include/ui/group/dialog_edit_group_advanced.ui
 
         include/ui/profile/edit_chain.h
         src/ui/profile/edit_chain.cpp

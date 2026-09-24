@@ -5,6 +5,45 @@
 
 namespace Configs
 {
+    QJsonObject SubscriptionOptions::ToJson() const {
+        QJsonObject json;
+        if (!user_agent.isEmpty()) json["user_agent"] = user_agent;
+        if (send_hwid != sendHwid::keepDefault) json["send_hwid"] = static_cast<int>(send_hwid);
+        if (!hwid.isEmpty()) json["hwid"] = hwid;
+        if (!hwid_os.isEmpty()) json["hwid_os"] = hwid_os;
+        if (!hwid_os_version.isEmpty()) json["hwid_os_version"] = hwid_os_version;
+        if (!hwid_model.isEmpty()) json["hwid_model"] = hwid_model;
+        if (keep_working) json["keep_working"] = true;
+        if (remove_duplicates) json["remove_duplicates"] = true;
+        if (remove_insecure) json["remove_insecure"] = true;
+        if (remove_invalid) json["remove_invalid"] = true;
+        if (url_test) json["url_test"] = true;
+        if (remove_unavailable) json["remove_unavailable"] = true;
+        if (sort_by_latency) json["sort_by_latency"] = true;
+        return json;
+    }
+
+    SubscriptionOptions SubscriptionOptions::FromJson(const QJsonObject &json) {
+        SubscriptionOptions options;
+        options.user_agent = json["user_agent"].toString();
+        const int mode = json["send_hwid"].toInt();
+        if (mode == static_cast<int>(sendHwid::on) || mode == static_cast<int>(sendHwid::off)) {
+            options.send_hwid = static_cast<sendHwid>(mode);
+        }
+        options.hwid = json["hwid"].toString();
+        options.hwid_os = json["hwid_os"].toString();
+        options.hwid_os_version = json["hwid_os_version"].toString();
+        options.hwid_model = json["hwid_model"].toString();
+        options.keep_working = json["keep_working"].toBool();
+        options.remove_duplicates = json["remove_duplicates"].toBool();
+        options.remove_insecure = json["remove_insecure"].toBool();
+        options.remove_invalid = json["remove_invalid"].toBool();
+        options.url_test = json["url_test"].toBool();
+        options.remove_unavailable = json["remove_unavailable"].toBool();
+        options.sort_by_latency = json["sort_by_latency"].toBool();
+        return options;
+    }
+
     void Group::clearCalculatedColumnWidth() {
         calculated_column_width.clear();
     }
@@ -46,6 +85,7 @@ namespace Configs
             case GroupSortMethod::ByAddress:
             case GroupSortMethod::ByName:
             case GroupSortMethod::ByTestResult:
+            case GroupSortMethod::ByLatency:
             case GroupSortMethod::ByTraffic:
             case GroupSortMethod::BySecurity:
             case GroupSortMethod::ByType: {
@@ -79,8 +119,8 @@ namespace Configs
                                           }
                                           ms_a = secA.transport + secA.label;
                                           ms_b = secB.transport + secB.label;
-                                      } else if (sortAction.method == GroupSortMethod::ByTestResult) {
-                                          if (test_sort_by == testBy::latency) {
+                                      } else if (sortAction.method == GroupSortMethod::ByTestResult || sortAction.method == GroupSortMethod::ByLatency) {
+                                          if (test_sort_by == testBy::latency || sortAction.method == GroupSortMethod::ByLatency) {
                                               return sortAction.descending ? get_latency_for_sort(profA) > get_latency_for_sort(profB) : get_latency_for_sort(profA) < get_latency_for_sort(profB);
                                           }
                                           if (test_sort_by == testBy::dlSpeed) {

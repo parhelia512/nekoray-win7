@@ -7,23 +7,28 @@
 #include <QTimer>
 #include <QFile>
 #include <QApplication>
-#include <QMap>
 #include <QStringList>
 
 
 
 #include "include/global/Configs.hpp"
 #include "include/ui/mainwindow.h"
-#include "include/global/DeviceDetailsHelper.hpp"
 
 namespace Configs_network {
 
-    HTTPResponse NetworkRequestHelper::HttpGet(const QString &url, bool sendHwid, bool useProxy, qint64 maxBytes) {
+    HTTPResponse NetworkRequestHelper::HttpGet(const QString &url, bool useProxy) {
+        HttpGetOptions options;
+        options.useProxy = useProxy;
+        return HttpGet(url, options);
+    }
+
+    HTTPResponse NetworkRequestHelper::HttpGet(const QString &url, const HttpGetOptions &options) {
+        const qint64 maxBytes = options.maxBytes;
         QNetworkRequest request;
         QNetworkAccessManager accessManager;
         accessManager.setTransferTimeout(10000);
         request.setUrl(url);
-        if (Configs::dataManager->settingsRepo->net_use_proxy || Configs::dataManager->settingsRepo->spmode_system_proxy || useProxy) {
+        if (Configs::dataManager->settingsRepo->net_use_proxy || Configs::dataManager->settingsRepo->spmode_system_proxy || options.useProxy) {
             if (Configs::dataManager->settingsRepo->started_id < 0) {
                 return HTTPResponse{QObject::tr("Request with proxy but no profile started.")};
             }
@@ -38,47 +43,14 @@ namespace Configs_network {
             accessManager.setProxy(p);
         }
         request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
-        request.setHeader(QNetworkRequest::KnownHeaders::UserAgentHeader, Configs::dataManager->settingsRepo->GetUserAgent());
+        request.setHeader(QNetworkRequest::KnownHeaders::UserAgentHeader,
+                          options.userAgent.isEmpty() ? Configs::dataManager->settingsRepo->GetUserAgent() : options.userAgent);
         if (Configs::dataManager->settingsRepo->net_insecure) {
             QSslConfiguration c;
             c.setPeerVerifyMode(QSslSocket::PeerVerifyMode::VerifyNone);
             request.setSslConfiguration(c);
         }
-        if (sendHwid) {
-            auto details = GetDeviceDetails();
-
-            QMap<QString, QString> customParams;
-            if (!Configs::dataManager->settingsRepo->sub_custom_hwid_params.isEmpty()) {
-                QStringList pairs = Configs::dataManager->settingsRepo->sub_custom_hwid_params.split(',');
-                for (const QString &pair : pairs) {
-                    QString trimmed = pair.trimmed();
-                    int eqPos = trimmed.indexOf('=');
-                    if (eqPos > 0) {
-                        QString key = trimmed.left(eqPos).trimmed();
-                        QString value = trimmed.mid(eqPos + 1).trimmed();
-                        if (!key.isEmpty() && !value.isEmpty() &&
-                            !value.contains('\n') && !value.contains('\r') &&
-                            value.length() < 1000) {
-                            QString lowerKey = key.toLower();
-                            if (lowerKey == "hwid" || lowerKey == "os" ||
-                                lowerKey == "osversion" || lowerKey == "model") {
-                                customParams[lowerKey] = value;
-                            }
-                        }
-                    }
-                }
-            }
-
-            QString hwid = customParams.contains("hwid") ? customParams["hwid"] : details.hwid;
-            QString os = customParams.contains("os") ? customParams["os"] : details.os;
-            QString osVersion = customParams.contains("osversion") ? customParams["osversion"] : details.osVersion;
-            QString model = customParams.contains("model") ? customParams["model"] : details.model;
-
-            if (!hwid.isEmpty()) request.setRawHeader("x-hwid", hwid.toUtf8());
-            if (!os.isEmpty()) request.setRawHeader("x-device-os", os.toUtf8());
-            if (!osVersion.isEmpty()) request.setRawHeader("x-ver-os", osVersion.toUtf8());
-            if (!model.isEmpty()) request.setRawHeader("x-device-model", model.toUtf8());
-        }
+        for (const auto &[name, value] : options.headers) request.setRawHeader(name, value);
         auto _reply = accessManager.get(request);
         connect(_reply, &QNetworkReply::sslErrors, _reply, [](const QList<QSslError> &errors) {
             QStringList error_str;

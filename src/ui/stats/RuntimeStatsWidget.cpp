@@ -365,7 +365,7 @@ void RuntimeStatsWidget::probeEgress() {
         QString ipText = RuntimeStatsWidget::tr("N/A");
         QString countryText = RuntimeStatsWidget::tr("N/A");
         bool egressOk = false;
-        const auto resp = NetworkRequestHelper::HttpGet(QStringLiteral("http://ip-api.com/json/"), false, true);
+        const auto resp = NetworkRequestHelper::HttpGet(QStringLiteral("http://ip-api.com/json/"), true);
         if (resp.error.isEmpty()) {
             const QJsonDocument doc = QJsonDocument::fromJson(resp.data);
             if (doc.isObject()) {

@@ -1,4 +1,5 @@
 #pragma once
+#include <QJsonObject>
 #include <QList>
 #include <QMutex>
 #include <QString>
@@ -32,6 +33,35 @@ namespace Configs
         bySecurity
     };
 
+    // Doubles as the index of the Advanced dialog's send_hwid combo.
+    enum class sendHwid : int {
+        keepDefault = 0,
+        on,
+        off
+    };
+
+    // Empty strings inherit the global subscription settings.
+    struct SubscriptionOptions {
+        QString user_agent;
+        sendHwid send_hwid = sendHwid::keepDefault;
+        QString hwid;
+        QString hwid_os;
+        QString hwid_os_version;
+        QString hwid_model;
+        bool keep_working = false;
+        bool remove_duplicates = false;
+        bool remove_insecure = false;
+        bool remove_invalid = false;
+        bool url_test = false;
+        // Follow-ups of url_test: ignored while it is off.
+        bool remove_unavailable = false;
+        bool sort_by_latency = false;
+
+        [[nodiscard]] QJsonObject ToJson() const;
+
+        static SubscriptionOptions FromJson(const QJsonObject &json);
+    };
+
     class Group {
     public:
         QMutex mutex;
@@ -43,6 +73,7 @@ namespace Configs
         QString url = "";
         QString info = "";
         qint64 sub_last_update = 0;
+        SubscriptionOptions sub_options;
         int front_proxy_id = -1;
         int landing_proxy_id = -1;
 

@@ -260,6 +260,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     parallelCoreCallPool->setMaxThreadCount(10);
     testRunner = std::make_unique<TestRunner>(this);
+    Subscription::updater()->SetUrlTester([this](const QList<int> &profileIDs, const Subscription::GroupUpdater::Finish &done) {
+        testRunner->queueUrlTests(profileIDs, done);
+    });
     ui->menu_start->setShortcuts({QKeySequence(Qt::Key_Return), QKeySequence(Qt::Key_Enter)});
     connect(ui->menu_start, &QAction::triggered, this, [=,this]() { profile_start(); });
     connect(ui->menu_stop, &QAction::triggered, this, [=,this]() { profile_stop(false, false, true); });
@@ -1138,6 +1141,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 }
 
 MainWindow::~MainWindow() {
+    Subscription::updater()->SetUrlTester(nullptr);
     delete ui;
 }
 

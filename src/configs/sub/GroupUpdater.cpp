@@ -1,5 +1,6 @@
 #include "include/configs/sub/GroupUpdater.hpp"
 
+#include "include/configs/generate.h"
 #include "include/configs/sub/SubscriptionParser.hpp"
 #include "include/configs/sub/SubscriptionReconcile.hpp"
 #include "include/database/GroupsRepo.h"
@@ -11,14 +12,18 @@
 #include <QDateTime>
 #include <QJsonDocument>
 #include <QMutexLocker>
+#include <QThreadPool>
 #include <QUrl>
 
 #include <algorithm>
+#include <atomic>
 
 namespace Subscription {
     namespace {
         constexpr int kInsertChunk = 500;
         constexpr qint64 kMaxSubscriptionBytes = 64LL * 1024 * 1024;
+        constexpr qsizetype kMaxHeaderValue = 1000;
+        constexpr int kValidityCheckThreads = 10;
 
         QByteArray digest(const QByteArray &data) {
             return QCryptographicHash::hash(data, QCryptographicHash::Sha256);
@@ -30,6 +35,58 @@ namespace Subscription {
 
         QByteArray identityKeyOf(const Configs::Profile &ent) {
             return digest(ent.type.toUtf8() + '|' + QJsonDocument(ent.outbound->ExportIdentity()).toJson(QJsonDocument::Compact));
+        }
+
+        bool usableHeaderValue(const QString &value) {
+            return !value.isEmpty() && value.size() < kMaxHeaderValue && !value.contains('\n') && !value.contains('\r');
+        }
+
+        void applyCustomHwidParams(DeviceDetails &device, const QString &params) {
+            for (const auto &pair : params.split(',')) {
+                const auto trimmed = pair.trimmed();
+                const auto eqPos = trimmed.indexOf('=');
+                if (eqPos <= 0) continue;
+                const auto key = trimmed.left(eqPos).trimmed().toLower();
+                const auto value = trimmed.mid(eqPos + 1).trimmed();
+                if (!usableHeaderValue(value)) continue;
+                if (key == "hwid") device.hwid = value;
+                else if (key == "os") device.os = value;
+                else if (key == "osversion") device.osVersion = value;
+                else if (key == "model") device.model = value;
+            }
+        }
+
+        QList<QPair<QByteArray, QByteArray>> identityHeaders(const RequestIdentity &identity) {
+            QList<QPair<QByteArray, QByteArray>> headers;
+            if (!identity.sendHwid) return headers;
+            const auto add = [&headers](const char *name, const QString &value) {
+                if (usableHeaderValue(value)) headers.append({name, value.toUtf8()});
+            };
+            add("x-hwid", identity.device.hwid);
+            add("x-device-os", identity.device.os);
+            add("x-ver-os", identity.device.osVersion);
+            add("x-device-model", identity.device.model);
+            return headers;
+        }
+
+        template <typename Visit>
+        void forEachProfile(const QList<int> &ids, Visit &&visit) {
+            for (qsizetype off = 0; off < ids.size(); off += Configs::BATCH_LIMIT_READ) {
+                for (const auto &ent : Configs::dataManager->profilesRepo->GetProfileBatch(ids.mid(off, Configs::BATCH_LIMIT_READ))) {
+                    if (ent != nullptr) visit(ent);
+                }
+            }
+        }
+
+        // Auto selectors are local state, not servers the remote sent.
+        QList<int> withoutSelectors(const QList<int> &ids) {
+            const auto selectorIds = Configs::dataManager->profilesRepo->GetProfileIdsByType("autoselector");
+            const QSet<int> selectors(selectorIds.begin(), selectorIds.end());
+            QList<int> result;
+            for (int id : ids) {
+                if (!selectors.contains(id)) result << id;
+            }
+            return result;
         }
 
         // BatchDeleteProfiles silently drops the running profile from the list it was handed (#1753).
@@ -122,11 +179,153 @@ namespace Subscription {
             const auto group = Configs::dataManager->groupsRepo->GetGroup(gid);
             return group == nullptr ? Int2String(gid) : group->name;
         }
+
+        QSet<int> invalidProfiles(const QList<std::shared_ptr<Configs::Profile>> &profiles, bool &coreUnreachable) {
+            QSet<int> invalid;
+            QMutex invalidMutex;
+            std::atomic<bool> unreachable = false;
+            QThreadPool pool;
+            pool.setMaxThreadCount(kValidityCheckThreads);
+            for (const auto &ent : profiles) {
+                pool.start([&, ent] {
+                    if (unreachable.load()) return;
+                    bool failed = false;
+                    const bool valid = Configs::IsValid(ent, &failed);
+                    if (failed) {
+                        unreachable.store(true);
+                        return;
+                    }
+                    if (valid) return;
+                    QMutexLocker locker(&invalidMutex);
+                    invalid.insert(ent->id);
+                });
+            }
+            pool.waitForDone();
+            coreUnreachable = unreachable.load();
+            return invalid;
+        }
+
+        // Each profile is listed under the first enabled action that claims it.
+        QList<int> removeFlagged(const QList<int> &ids, const Configs::SubscriptionOptions &options, QString &report) {
+            if (!options.remove_duplicates && !options.remove_insecure && !options.remove_invalid) return {};
+            QList<std::shared_ptr<Configs::Profile>> profiles;
+            forEachProfile(ids, [&profiles](const std::shared_ptr<Configs::Profile> &ent) { profiles << ent; });
+
+            QSet<int> flagged;
+            QList<int> doomed;
+            QString sections;
+            const auto collect = [&](const QString &heading, const auto &matches) {
+                QStringList names;
+                for (const auto &ent : profiles) {
+                    if (flagged.contains(ent->id) || !matches(ent)) continue;
+                    flagged.insert(ent->id);
+                    doomed << ent->id;
+                    names << ent->outbound->DisplayTypeAndName();
+                }
+                if (!names.isEmpty()) sections += "\n" + heading.arg(names.size()) + "\n" + notice(names, "[-]", "removed");
+            };
+
+            if (options.remove_duplicates) {
+                QList<std::shared_ptr<Configs::Profile>> uniq;
+                Configs::ProfileFilter::Uniq(profiles, uniq, false);
+                QSet<int> keep;
+                for (const auto &ent : uniq) keep.insert(ent->id);
+                collect(QObject::tr("Removed %1 duplicate profiles:"),
+                        [&keep](const std::shared_ptr<Configs::Profile> &ent) { return !keep.contains(ent->id); });
+            }
+            if (options.remove_insecure) {
+                collect(QObject::tr("Removed %1 insecure profiles:"),
+                        [](const std::shared_ptr<Configs::Profile> &ent) { return ent->outbound->GetSecurity().isDangerous(); });
+            }
+            if (options.remove_invalid) {
+                QList<std::shared_ptr<Configs::Profile>> unchecked;
+                for (const auto &ent : profiles) {
+                    if (!flagged.contains(ent->id)) unchecked << ent;
+                }
+                bool coreUnreachable = false;
+                const auto invalid = invalidProfiles(unchecked, coreUnreachable);
+                // Every check fails while the core is down: deleting on that verdict would empty the group.
+                if (coreUnreachable) {
+                    MW_show_log(QObject::tr("Skipped removing invalid profiles: the core is unreachable."));
+                } else {
+                    collect(QObject::tr("Removed %1 invalid profiles:"),
+                            [&invalid](const std::shared_ptr<Configs::Profile> &ent) { return invalid.contains(ent->id); });
+                }
+            }
+
+            if (doomed.isEmpty()) return {};
+            const auto outcome = deleteProfiles(doomed);
+            if (!outcome.ok) {
+                runOnUiThread([] { MessageBoxWarning("Internal error", "DB Error when deleting profiles, data may be corrupted"); });
+            }
+            report += sections;
+            if (!outcome.kept.isEmpty()) report += "\n" + QObject::tr("The running profile was kept.");
+            return outcome.deleted;
+        }
+
+        QList<int> removeUnavailableAndSort(const std::shared_ptr<Configs::Group> &group, const Configs::SubscriptionOptions &options, QString &report) {
+            QList<int> deleted;
+            if (options.remove_unavailable) {
+                QList<int> doomed;
+                QStringList names;
+                forEachProfile(withoutSelectors(group->Profiles()), [&](const std::shared_ptr<Configs::Profile> &ent) {
+                    if (!ent->IsUnavailable()) return;
+                    doomed << ent->id;
+                    names << ent->outbound->DisplayTypeAndName();
+                });
+                if (!doomed.isEmpty()) {
+                    const auto outcome = deleteProfiles(doomed);
+                    if (!outcome.ok) {
+                        runOnUiThread([] { MessageBoxWarning("Internal error", "DB Error when deleting profiles, data may be corrupted"); });
+                    }
+                    deleted = outcome.deleted;
+                    report += "\n" + QObject::tr("Removed %1 unavailable profiles:").arg(names.size()) + "\n" + notice(names, "[-]", "removed");
+                    if (!outcome.kept.isEmpty()) report += "\n" + QObject::tr("The running profile was kept.");
+                }
+            }
+            if (options.sort_by_latency) {
+                GroupSortAction sort;
+                sort.method = GroupSortMethod::ByLatency;
+                if (group->SortProfiles(sort)) {
+                    Configs::dataManager->groupsRepo->Save(group);
+                } else {
+                    MW_show_log(QObject::tr("Skipped sorting %1: another sort is in progress.").arg(group->name));
+                }
+            }
+            return deleted;
+        }
     } // namespace
+
+    RequestIdentity ResolveIdentity(const Configs::Group *group) {
+        const auto &settings = Configs::dataManager->settingsRepo;
+        RequestIdentity identity;
+        identity.userAgent = settings->GetUserAgent();
+        identity.sendHwid = settings->sub_send_hwid;
+        identity.device = GetDeviceDetails();
+        applyCustomHwidParams(identity.device, settings->sub_custom_hwid_params);
+        if (group == nullptr) return identity;
+
+        const auto &options = group->sub_options;
+        if (usableHeaderValue(options.user_agent)) identity.userAgent = options.user_agent;
+        if (options.send_hwid != Configs::sendHwid::keepDefault) identity.sendHwid = options.send_hwid == Configs::sendHwid::on;
+        const auto take = [](QString &field, const QString &value) {
+            if (usableHeaderValue(value)) field = value;
+        };
+        take(identity.device.hwid, options.hwid);
+        take(identity.device.os, options.hwid_os);
+        take(identity.device.osVersion, options.hwid_os_version);
+        take(identity.device.model, options.hwid_model);
+        return identity;
+    }
 
     GroupUpdater *updater() {
         static auto *instance = new GroupUpdater;
         return instance;
+    }
+
+    void GroupUpdater::SetUrlTester(UrlTester tester) {
+        QMutexLocker locker(&mutex);
+        urlTester = std::move(tester);
     }
 
     void GroupUpdater::RefreshGroup(int gid, const Finish &finish, bool showDiff) {
@@ -184,7 +383,7 @@ namespace Subscription {
         enqueue({-1, false, [=, this] {
             QByteArray body;
             QString userInfo;
-            if (fetch(content, content, body, userInfo)) importDocuments(-1, {std::move(body)});
+            if (fetch(content, content, ResolveIdentity(nullptr), body, userInfo)) importDocuments(-1, {std::move(body)});
             emit asyncUpdateCallback(-1);
             if (finish != nullptr) finish();
         }});
@@ -246,9 +445,13 @@ namespace Subscription {
         }
     }
 
-    bool GroupUpdater::fetch(const QString &url, const QString &name, QByteArray &body, QString &userInfo) {
+    bool GroupUpdater::fetch(const QString &url, const QString &name, const RequestIdentity &identity, QByteArray &body, QString &userInfo) {
         MW_show_log(">>>>>>>> " + QObject::tr("Requesting subscription: %1").arg(name));
-        auto resp = NetworkRequestHelper::HttpGet(url, Configs::dataManager->settingsRepo->sub_send_hwid, false, kMaxSubscriptionBytes);
+        HttpGetOptions options;
+        options.maxBytes = kMaxSubscriptionBytes;
+        options.userAgent = identity.userAgent;
+        options.headers = identityHeaders(identity);
+        auto resp = NetworkRequestHelper::HttpGet(url, options);
         if (!resp.error.isEmpty()) {
             MW_show_log("<<<<<<<< " + QObject::tr("Requesting subscription %1 error: %2").arg(name, resp.error + "\n" + resp.data));
             return false;
@@ -281,10 +484,11 @@ namespace Subscription {
         settings->imported_count = 0;
         auto group = groupsRepo->GetGroup(gid);
         if (group == nullptr || group->archive) return;
+        const auto options = group->sub_options;
 
         QByteArray body;
         QString userInfo;
-        if (!fetch(group->url.trimmed(), group->name, body, userInfo)) return;
+        if (!fetch(group->url.trimmed(), group->name, ResolveIdentity(group.get()), body, userInfo)) return;
 
         group->sub_last_update = QDateTime::currentMSecsSinceEpoch() / 1000;
         group->info = userInfo;
@@ -313,25 +517,31 @@ namespace Subscription {
         bool cleared = false;
         if (settings->sub_clear) {
             MW_show_log(QObject::tr("Clearing servers..."));
-            const auto outcome = deleteProfiles(members());
+            auto doomed = members();
+            if (options.keep_working) {
+                QSet<int> working;
+                forEachProfile(doomed, [&working](const std::shared_ptr<Configs::Profile> &ent) {
+                    if (ent->IsWorking()) working.insert(ent->id);
+                });
+                doomed.removeIf([&working](int id) { return working.contains(id); });
+            }
+            const auto outcome = deleteProfiles(doomed);
             if (!outcome.ok) {
                 runOnUiThread([] { MessageBoxWarning("Internal Error", "DB Error when deleting profiles, Please try again."); });
                 return;
             }
             disturbed = outcome.deleted;
             // A survivor still belongs to the subscription: fall through to the diff.
-            cleared = outcome.kept.isEmpty();
+            cleared = members().isEmpty();
         }
 
         QList<OldEntry> old;
+        QSet<int> working;
         if (!cleared) {
-            const auto ids = members();
-            for (qsizetype off = 0; off < ids.size(); off += Configs::BATCH_LIMIT_READ) {
-                for (const auto &ent : profilesRepo->GetProfileBatch(ids.mid(off, Configs::BATCH_LIMIT_READ))) {
-                    if (ent == nullptr) continue;
-                    old.append({ent->id, {contentKeyOf(*ent), identityKeyOf(*ent)}, ent->outbound->DisplayTypeAndName()});
-                }
-            }
+            forEachProfile(members(), [&](const std::shared_ptr<Configs::Profile> &ent) {
+                old.append({ent->id, {contentKeyOf(*ent), identityKeyOf(*ent)}, ent->outbound->DisplayTypeAndName()});
+                if (options.keep_working && ent->IsWorking()) working.insert(ent->id);
+            });
         }
         ContentIndex index(old);
         ImportSink sink(gid, cleared ? nullptr : &index);
@@ -361,6 +571,10 @@ namespace Subscription {
                 disturbed << oldId;
             }
 
+            QList<int> stale;
+            QList<int> keptWorking;
+            for (int id : plan.stale) (working.contains(id) ? keptWorking : stale) << id;
+
             const auto previousOrder = group->profiles;
             group->profiles = plan.order;
             for (const auto &[position, id] : sticky) {
@@ -368,37 +582,62 @@ namespace Subscription {
             }
             groupsRepo->Save(group);
 
-            const auto outcome = deleteProfiles(plan.stale);
+            const auto outcome = deleteProfiles(stale);
             if (!outcome.ok) {
                 runOnUiThread([] { MessageBoxWarning("Internal error", "DB Error when deleting profiles, data may be corrupted"); });
             }
             disturbed << outcome.deleted;
 
             // Nothing rebuilds group->profiles from the rows: a survivor left out here is orphaned.
-            QString notice_kept;
-            for (int id : outcome.kept) {
-                if (group->HasProfile(id)) continue;
+            const auto restore = [&](int id) {
+                if (group->HasProfile(id)) return false;
                 const auto position = previousOrder.indexOf(id);
                 group->profiles.insert(position < 0 ? group->profiles.size()
                                                     : std::min<qsizetype>(position, group->profiles.size()), id);
+                return true;
+            };
+            QString notice_kept;
+            for (int id : outcome.kept) {
+                if (!restore(id)) continue;
                 if (const auto ent = profilesRepo->GetProfile(id); ent != nullptr) {
                     notice_kept += "[=] " + ent->outbound->DisplayTypeAndName() + "\n";
                 }
             }
-            if (!outcome.kept.isEmpty()) groupsRepo->Save(group);
+            QStringList workingNames;
+            for (int id : keptWorking) {
+                if (!restore(id)) continue;
+                if (const auto ent = profilesRepo->GetProfile(id); ent != nullptr) workingNames << ent->outbound->DisplayTypeAndName();
+            }
+            if (!outcome.kept.isEmpty() || !keptWorking.isEmpty()) groupsRepo->Save(group);
+
+            auto deletedNames = plan.deleted;
+            if (!keptWorking.isEmpty()) {
+                const QSet<int> doomed(stale.begin(), stale.end());
+                deletedNames.clear();
+                for (const auto &entry : old) {
+                    if (doomed.contains(entry.id)) deletedNames << entry.display;
+                }
+            }
 
             change_text = "\n" + QObject::tr("Added %1 profiles:\n%2\nUpdated %3 profiles:\n%4\nDeleted %5 Profiles:\n%6")
                                      .arg(plan.added.size())
                                      .arg(notice(plan.added, "[+]", "added"))
                                      .arg(plan.updates.size())
                                      .arg(notice(plan.updated, "[~]", "updated"))
-                                     .arg(plan.deleted.size())
-                                     .arg(notice(plan.deleted, "[-]", "deleted"));
+                                     .arg(deletedNames.size())
+                                     .arg(notice(deletedNames, "[-]", "deleted"));
             if (!notice_kept.isEmpty()) {
                 change_text += "\n" + QObject::tr("Still in use, so kept instead of deleted:\n%1").arg(notice_kept);
             }
-            if (plan.added.isEmpty() && plan.updates.isEmpty() && plan.deleted.isEmpty()) change_text = QObject::tr("Nothing");
+            if (!workingNames.isEmpty()) {
+                change_text += "\n" + QObject::tr("Working, so kept instead of deleted:\n%1").arg(notice(workingNames, "[=]", "kept"));
+            }
+            if (plan.added.isEmpty() && plan.updates.isEmpty() && deletedNames.isEmpty() && keptWorking.isEmpty()) {
+                change_text = QObject::tr("Nothing");
+            }
         }
+
+        disturbed << removeFlagged(members(), options, change_text);
 
         MW_show_log("<<<<<<<< " + QObject::tr("Change of %1:").arg(group->name) + "\n" + change_text);
         if (showDiff && settings->sub_show_change_popup) {
@@ -410,6 +649,35 @@ namespace Subscription {
         // Auto selectors resolve members from the group at build time, so a refresh can invalidate an untouched one.
         QStringList selectorArgs{Int2String(group->id)};
         for (int id : disturbed) selectorArgs << Int2String(id);
+        MW_dialog_message(MwMessage::SubscriptionGroupChanged, selectorArgs);
+        MW_dialog_message(MwMessage::SubscriptionFinished, {MwArg::Quiet});
+
+        if (options.url_test) requestUrlTest(gid, members());
+    }
+
+    void GroupUpdater::requestUrlTest(int gid, const QList<int> &profileIDs) {
+        UrlTester tester;
+        {
+            QMutexLocker locker(&mutex);
+            tester = urlTester;
+        }
+        if (tester == nullptr) return;
+        // Back through the queue, so the follow-up never races another job over the group.
+        tester(profileIDs, [=, this] { enqueue({-1, false, [=, this] { afterUrlTest(gid); }}); });
+    }
+
+    void GroupUpdater::afterUrlTest(int gid) {
+        const auto group = Configs::dataManager->groupsRepo->GetGroup(gid);
+        if (group == nullptr || group->archive) return;
+        const auto options = group->sub_options;
+        if (!options.url_test || (!options.remove_unavailable && !options.sort_by_latency)) return;
+
+        QString report;
+        const auto deleted = removeUnavailableAndSort(group, options, report);
+        if (!report.isEmpty()) MW_show_log("<<<<<<<< " + QObject::tr("After the URL test of %1:").arg(group->name) + report);
+
+        QStringList selectorArgs{Int2String(gid)};
+        for (int id : deleted) selectorArgs << Int2String(id);
         MW_dialog_message(MwMessage::SubscriptionGroupChanged, selectorArgs);
         MW_dialog_message(MwMessage::SubscriptionFinished, {MwArg::Quiet});
     }
