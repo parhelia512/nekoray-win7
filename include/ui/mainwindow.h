@@ -280,7 +280,7 @@ private:
     class ConnectionsTreeFilterProxyModel *connectionsFilterModel = nullptr;
     class ConnectionsFilterHeader *connectionFilterHeader = nullptr;
     QHash<QString, bool> m_processExpanded; // per-process choices; the rest follow m_processesExpandedByDefault
-    bool m_processesExpandedByDefault = true;
+    bool m_processesExpandedByDefault = false;
     QTimer *connectionFilterDebounce = nullptr;
     QToolButton *connectionExpandButton = nullptr;
     QToolButton *connectionCloseAllButton = nullptr;
