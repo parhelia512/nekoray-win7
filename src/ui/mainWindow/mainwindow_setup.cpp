@@ -756,8 +756,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
         Configs::dataManager->settingsRepo->Save();
     });
     connect(ui->actionStart_with_system, &QAction::triggered, this, [=,this](bool checked) {
-        AutoRun_SetEnabled(checked);
-        ui->actionStart_with_system->setChecked(checked);
+        if (QString error; !AutoRun_SetEnabled(checked, &error)) {
+            MessageBoxWarning(tr("Start with system"), tr("Could not update the autostart entry:") + "\n" + error);
+        }
+        ui->actionStart_with_system->setChecked(AutoRun_IsEnabled());
     });
     connect(ui->actionAllow_LAN, &QAction::triggered, this, [=,this](bool checked) {
         Configs::dataManager->settingsRepo->inbound_address = checked ? "::" : "127.0.0.1";
