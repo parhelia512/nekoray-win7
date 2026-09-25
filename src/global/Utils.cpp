@@ -456,6 +456,8 @@ void LaunchFiles_FlushPending() {
 void runOnNewThread(const std::function<void()> &callback, bool wait) {
     auto *timer = new QTimer();
     auto thread = new QThread();
+
+    if (auto *app = QCoreApplication::instance()) thread->moveToThread(app->thread());
     timer->moveToThread(thread);
     timer->setSingleShot(true);
 
@@ -466,7 +468,7 @@ void runOnNewThread(const std::function<void()> &callback, bool wait) {
     QObject::connect(timer, &QTimer::timeout, [=, &loop]() {
         callback();
         timer->deleteLater();
-        QMetaObject::invokeMethod(thread, "quit", Qt::QueuedConnection);
+        thread->quit();
 
         if (wait)
         {
