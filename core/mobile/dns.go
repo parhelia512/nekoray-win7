@@ -2,22 +2,35 @@ package mobile
 
 import (
 	"context"
+	"errors"
 	"net/netip"
+	"slices"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"syscall"
+	"time"
 
 	"github.com/sagernet/sing-box/adapter"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/dns"
+	"github.com/sagernet/sing-box/dns/transport"
 	"github.com/sagernet/sing-box/dns/transport/local"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	M "github.com/sagernet/sing/common/metadata"
+	N "github.com/sagernet/sing/common/network"
 	"github.com/sagernet/sing/service"
 
 	mDNS "github.com/miekg/dns"
+)
+
+// The budget sing-box gives the servers of resolv.conf and of the Windows adapters.
+const (
+	networkDNSTimeout  = 5 * time.Second
+	networkDNSAttempts = 2
 )
 
 type LocalDNSTransport interface {
@@ -26,11 +39,38 @@ type LocalDNSTransport interface {
 	Exchange(ctx *ExchangeContext, message []byte) error
 }
 
+// `local` asks the default network's DNS servers itself, as sing-box does on Linux and Windows. Android's
+// resolver also applies Private DNS, which stalls every lookup when its server is unreachable without the
+// VPN, so it only answers for a network that lists no DNS server.
 type platformTransport struct {
 	dns.TransportAdapter
+	logger            log.ContextLogger
 	iif               LocalDNSTransport
 	preferredResolver *local.PreferredDomainResolver
 	networkManager    adapter.NetworkManager
+	dialer            N.Dialer
+	serverSet         atomic.Pointer[networkServerSet]
+	serverSetAccess   sync.Mutex
+}
+
+type networkServerSet struct {
+	servers    []string
+	transports []adapter.DNSTransport
+}
+
+// localDNSError is an exchange of the local server that got no answer; Instance.Start looks for it to tell a
+// start that failed on the network's DNS from other failures.
+type localDNSError struct {
+	servers string
+	err     error
+}
+
+func (e *localDNSError) Error() string {
+	return e.err.Error()
+}
+
+func (e *localDNSError) Unwrap() error {
+	return e.err
 }
 
 func newPlatformTransport(ctx context.Context, logger log.ContextLogger, iif LocalDNSTransport, tag string, options option.LocalDNSServerOptions) (*platformTransport, error) {
@@ -38,11 +78,17 @@ func newPlatformTransport(ctx context.Context, logger log.ContextLogger, iif Loc
 	if err != nil {
 		return nil, err
 	}
+	transportDialer, err := dns.NewLocalDialer(ctx, options)
+	if err != nil {
+		return nil, err
+	}
 	return &platformTransport{
 		TransportAdapter:  dns.NewTransportAdapterWithLocalOptions(C.DNSTypeLocal, tag, options),
+		logger:            logger,
 		iif:               iif,
 		preferredResolver: preferredResolver,
 		networkManager:    service.FromContext[adapter.NetworkManager](ctx),
+		dialer:            transportDialer,
 	}, nil
 }
 
@@ -52,10 +98,20 @@ func (p *platformTransport) Start(stage adapter.StartStage) error {
 }
 
 func (p *platformTransport) Close() error {
+	serverSet := p.serverSet.Swap(nil)
+	if serverSet != nil {
+		serverSet.close()
+	}
 	return nil
 }
 
 func (p *platformTransport) Reset() {
+	serverSet := p.serverSet.Load()
+	if serverSet != nil {
+		for _, serverTransport := range serverSet.transports {
+			serverTransport.Reset()
+		}
+	}
 }
 
 func (p *platformTransport) PreferredDomain(domain string) bool {
@@ -73,13 +129,120 @@ func (p *platformTransport) Environment() []string {
 	return defaultInterface.DNSServers
 }
 
-// The Kotlin resolver runs on its own goroutine so a stalled platform call cannot hold the DNS
-// router past the query's context.
 func (p *platformTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {
 	localResponse := p.preferredResolver.Lookup(message)
 	if localResponse != nil {
 		return localResponse, nil
 	}
+	serverSet, err := p.networkServers()
+	if err != nil {
+		return nil, err
+	}
+	var (
+		response *mDNS.Msg
+		servers  string
+	)
+	if serverSet != nil {
+		servers = strings.Join(serverSet.servers, ", ")
+		response, err = serverSet.exchange(ctx, message)
+	} else {
+		response, err = p.exchangePlatform(ctx, message)
+	}
+	var rcodeError dns.RcodeError
+	if err != nil && !errors.Is(err, context.Canceled) && !errors.As(err, &rcodeError) {
+		return nil, &localDNSError{servers: servers, err: err}
+	}
+	return response, err
+}
+
+// The servers the default network lists, nil when it lists none.
+func (p *platformTransport) networkServers() (*networkServerSet, error) {
+	if p.networkManager == nil {
+		return nil, nil
+	}
+	defaultInterface := p.networkManager.DefaultNetworkInterface()
+	if defaultInterface == nil || len(defaultInterface.DNSServers) == 0 {
+		return nil, nil
+	}
+	servers := defaultInterface.DNSServers
+	serverSet := p.serverSet.Load()
+	if serverSet != nil && slices.Equal(serverSet.servers, servers) {
+		return serverSet, nil
+	}
+	p.serverSetAccess.Lock()
+	defer p.serverSetAccess.Unlock()
+	serverSet = p.serverSet.Load()
+	if serverSet != nil && slices.Equal(serverSet.servers, servers) {
+		return serverSet, nil
+	}
+	transports := make([]adapter.DNSTransport, 0, len(servers))
+	for _, server := range servers {
+		serverAddr := M.ParseSocksaddrHostPort(server, 53)
+		if !serverAddr.IsIP() {
+			continue
+		}
+		serverTransport := transport.NewUDPRaw(p.logger, dns.NewTransportAdapter(C.DNSTypeUDP, "", nil), p.dialer, serverAddr)
+		err := serverTransport.Start(adapter.StartStateStart)
+		if err != nil {
+			for _, startedTransport := range transports {
+				startedTransport.Close()
+			}
+			return nil, E.Cause(err, "initialize transport for ", serverAddr)
+		}
+		transports = append(transports, serverTransport)
+	}
+	if len(transports) == 0 {
+		return nil, nil
+	}
+	newServerSet := &networkServerSet{
+		servers:    slices.Clone(servers),
+		transports: transports,
+	}
+	oldServerSet := p.serverSet.Swap(newServerSet)
+	if oldServerSet != nil {
+		oldServerSet.close()
+	}
+	p.logger.Debug("network DNS servers: ", strings.Join(servers, ", "))
+	return newServerSet, nil
+}
+
+// Each attempt walks the servers in order, as local_shared.go does for resolv.conf.
+func (s *networkServerSet) exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {
+	fqdn := message.Question[0].Name
+	exchangers := make([]transport.AsyncExchanger, 0, networkDNSAttempts*len(s.transports))
+	for range networkDNSAttempts {
+		for _, serverTransport := range s.transports {
+			exchangers = append(exchangers, func(ctx context.Context, callback func(response *mDNS.Msg, err error)) {
+				attemptCtx, cancel := context.WithTimeout(ctx, networkDNSTimeout)
+				serverTransport.ExchangeAsync(attemptCtx, transport.NewFanOutRequest(message, fqdn, false), func(response *mDNS.Msg, err error) {
+					cancel()
+					callback(response, err)
+				})
+			})
+		}
+	}
+	done := make(chan struct{})
+	var (
+		response *mDNS.Msg
+		err      error
+	)
+	transport.ExchangeSequential(ctx, exchangers, nil, func(callbackResponse *mDNS.Msg, callbackErr error) {
+		response, err = callbackResponse, callbackErr
+		close(done)
+	})
+	<-done
+	return response, err
+}
+
+func (s *networkServerSet) close() {
+	for _, serverTransport := range s.transports {
+		serverTransport.Close()
+	}
+}
+
+// The Kotlin resolver runs on its own goroutine so a stalled platform call cannot hold the DNS
+// router past the query's context.
+func (p *platformTransport) exchangePlatform(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {
 	response := &ExchangeContext{
 		context: ctx,
 	}

@@ -2,6 +2,7 @@ package mobile
 
 import (
 	"context"
+	"errors"
 	"io"
 	stdlog "log"
 	"sync"
@@ -66,9 +67,10 @@ type Instance struct {
 	urlTestHistory *urltest.HistoryStorage
 	logFactory     log.Factory
 
-	stateAccess sync.Mutex
-	started     bool
-	closed      bool
+	stateAccess     sync.Mutex
+	started         bool
+	closed          bool
+	localDNSFailure *LocalDNSFailure
 
 	statusAccess      sync.Mutex
 	statusSampled     bool
@@ -154,10 +156,29 @@ func (i *Instance) Start() error {
 	i.started = true
 	i.stateAccess.Unlock()
 	if err := i.handle.Start(); err != nil {
+		var dnsErr *localDNSError
+		if errors.As(err, &dnsErr) {
+			i.stateAccess.Lock()
+			i.localDNSFailure = &LocalDNSFailure{Servers: dnsErr.servers}
+			i.stateAccess.Unlock()
+		}
 		_ = i.Close()
 		return E.Cause(err, "start service")
 	}
 	return nil
+}
+
+// LocalDNSFailure describes a start that failed because the local DNS server got no answer.
+type LocalDNSFailure struct {
+	// Servers lists the default network's DNS servers that were asked, empty when Android's resolver was.
+	Servers string
+}
+
+// LocalDNSFailure is non-nil once Start has failed on the local DNS server.
+func (i *Instance) LocalDNSFailure() *LocalDNSFailure {
+	i.stateAccess.Lock()
+	defer i.stateAccess.Unlock()
+	return i.localDNSFailure
 }
 
 func (i *Instance) Close() error {
