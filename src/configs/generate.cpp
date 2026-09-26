@@ -785,6 +785,10 @@ namespace Configs {
 
         // ---------------------------------------------------------------- dns
 
+        QJsonObject directDomainResolver() {
+            return {{"server", tags::dnsDirect}, {"strategy", getDirectDomainStrategy()}};
+        }
+
         QJsonObject buildDnsObj(BuildContext &ctx, QString address) {
             if (address.startsWith("local")) {
                 if (ctx.tunEnabled && ctx.isResolvedUsed) {
@@ -1327,6 +1331,12 @@ namespace Configs {
             QSet<QString> addressableTags;
         };
 
+        bool resolvesHostnamesViaDnsRules(const Profile &hop) {
+            if (hop.outbound->IsEndpoint()) return true;
+            const auto *socksOutbound = hop.Socks();
+            return socksOutbound != nullptr && socksOutbound->version == 4;
+        }
+
         void buildSingboxChain(BuildContext &ctx, const QList<std::shared_ptr<Profile>> &ents, const hopChainOptions &opts) {
             for (int idx = 0; idx < ents.size(); idx++)
             {
@@ -1367,6 +1377,10 @@ namespace Configs {
                     object["domain_resolver"] = QJsonObject{{"server", tags::dnsDirect}};
                 if (!nextTag.isEmpty() && opts.link) object["detour"] = nextTag;
                 if (opts.warpWrap && idx == 0) object["detour"] = tags::warpBypass;
+                // A detour gets the server hostname unresolved; endpoints look it up via DNS rules, which end at dns-remote over the proxy.
+                if (!nextTag.isEmpty() && opts.link && !ent->outbound->IsEndpoint() && !object.contains("domain_resolver") &&
+                    resolvesHostnamesViaDnsRules(*ents[idx + 1]))
+                    object["domain_resolver"] = directDomainResolver();
                 if (ent->outbound->IsEndpoint())
                 {
                     ctx.endpoints.append(object);
@@ -2137,9 +2151,7 @@ namespace Configs {
             }
             if (settings.enable_stats && !route.contains("find_process"))  route["find_process"] = true;
             if (!route.contains("default_domain_resolver"))
-                route["default_domain_resolver"] = QJsonObject{
-                                        {"server", tags::dnsDirect},
-                                        {"strategy", getDirectDomainStrategy()}};
+                route["default_domain_resolver"] = directDomainResolver();
             if (settings.spmode_vpn && !route.contains("auto_detect_interface")) route["auto_detect_interface"] = true;
 
             ctx.result->coreConfig["route"] = route;
@@ -2670,10 +2682,7 @@ namespace Configs {
         }
         QJsonObject routeObj{
                 {"auto_detect_interface", true},
-                {"default_domain_resolver", QJsonObject{
-                        {"server", tags::dnsDirect},
-                        {"strategy", getDirectDomainStrategy()},
-                   }}
+                {"default_domain_resolver", directDomainResolver()},
         };
         if (!routeRules.isEmpty()) routeObj["rules"] = routeRules;
         ctx.result->coreConfig["route"] = routeObj;
