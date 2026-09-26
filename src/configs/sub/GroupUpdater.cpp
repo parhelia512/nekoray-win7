@@ -3,6 +3,7 @@
 #include "include/configs/generate.h"
 #include "include/configs/sub/SubscriptionParser.hpp"
 #include "include/configs/sub/SubscriptionReconcile.hpp"
+#include "include/configs/sub/SubscriptionScan.hpp"
 #include "include/database/GroupsRepo.h"
 #include "include/database/ProfilesRepo.h"
 #include "include/global/HTTPRequestHelper.hpp"
@@ -67,6 +68,19 @@ namespace Subscription {
             add("x-ver-os", identity.device.osVersion);
             add("x-device-model", identity.device.model);
             return headers;
+        }
+
+        QSsl::SslProtocol tlsProtocolOf(Configs::subTlsVersion version) {
+            switch (version) {
+                case Configs::subTlsVersion::tls12: return QSsl::TlsV1_2;
+                case Configs::subTlsVersion::tls13: return QSsl::TlsV1_3;
+                default: return QSsl::SecureProtocols;
+            }
+        }
+
+        bool looksLikeWebPage(const QByteArray &body) {
+            const auto text = scan::trim(scan::view(body));
+            return scan::startsWithNoCase(text, "<!doctype html") || scan::startsWithNoCase(text, "<html");
         }
 
         template <typename Visit>
@@ -314,10 +328,16 @@ namespace Subscription {
         identity.sendHwid = settings->sub_send_hwid;
         identity.device = GetDeviceDetails();
         applyCustomHwidParams(identity.device, settings->sub_custom_hwid_params);
+        identity.tlsVersion = static_cast<Configs::subTlsVersion>(
+            std::clamp(settings->sub_tls_version, 0, static_cast<int>(Configs::subTlsVersion::tls13)));
+        identity.httpVersion = static_cast<Configs::subHttpVersion>(
+            std::clamp(settings->sub_http_version, 0, static_cast<int>(Configs::subHttpVersion::http11)));
         if (group == nullptr) return identity;
 
         const auto &options = group->sub_options;
         if (usableHeaderValue(options.user_agent)) identity.userAgent = options.user_agent;
+        identity.tlsVersion = options.tls_version.value_or(identity.tlsVersion);
+        identity.httpVersion = options.http_version.value_or(identity.httpVersion);
         if (options.send_hwid != Configs::sendHwid::keepDefault) identity.sendHwid = options.send_hwid == Configs::sendHwid::on;
         const auto take = [](QString &field, const QString &value) {
             if (usableHeaderValue(value)) field = value;
@@ -462,6 +482,8 @@ namespace Subscription {
         options.maxBytes = kMaxSubscriptionBytes;
         options.userAgent = identity.userAgent;
         options.headers = identityHeaders(identity);
+        options.tlsProtocol = tlsProtocolOf(identity.tlsVersion);
+        options.http2 = identity.httpVersion != Configs::subHttpVersion::http11;
         auto resp = NetworkRequestHelper::HttpGet(url, options);
         if (!resp.error.isEmpty()) {
             MW_show_log("<<<<<<<< " + QObject::tr("Requesting subscription %1 error: %2").arg(name, resp.error + "\n" + resp.data));
@@ -505,6 +527,9 @@ namespace Subscription {
         QStringList diagnostics;
         if (!yieldsProfile(body, diagnostics)) {
             for (const auto &line : diagnostics) MW_show_log(line);
+            if (looksLikeWebPage(body)) {
+                MW_show_log(QObject::tr("The server returned a web page instead of a subscription. If it is a CAPTCHA or a bot check, try another TLS version, HTTP version or User Agent in the group's Advanced settings."));
+            }
             MW_show_log("<<<<<<<< " + QObject::tr("No profiles found in the subscription: %1 was left unchanged.").arg(group->name));
             return;
         }

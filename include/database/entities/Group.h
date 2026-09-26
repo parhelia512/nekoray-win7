@@ -4,6 +4,8 @@
 #include <QMutex>
 #include <QString>
 
+#include <optional>
+
 #include "include/ui/group/GroupSort.hpp"
 
 namespace Configs
@@ -40,9 +42,23 @@ namespace Configs
         off
     };
 
-    // Empty strings inherit the global subscription settings.
+    // Persisted as ints: append only.
+    enum class subTlsVersion : int {
+        automatic = 0,
+        tls12,
+        tls13
+    };
+
+    enum class subHttpVersion : int {
+        automatic = 0,
+        http11
+    };
+
+    // Empty values inherit the global subscription settings.
     struct SubscriptionOptions {
         QString user_agent;
+        std::optional<subTlsVersion> tls_version;
+        std::optional<subHttpVersion> http_version;
         sendHwid send_hwid = sendHwid::keepDefault;
         QString hwid;
         QString hwid_os;
