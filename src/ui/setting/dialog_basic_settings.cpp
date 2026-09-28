@@ -799,6 +799,7 @@ void DialogBasicSettings::on_backup_restore_clicked() {
         return;
     }
 
+    int skippedRules = 0;
     if (chosen.anyDb()) {
         QString tempDbPath = QDir::temp().filePath("Thr_restore_tmp.db");
         QFile::remove(tempDbPath);
@@ -812,7 +813,7 @@ void DialogBasicSettings::on_backup_restore_clicked() {
         tempDbFile.close();
 
         try {
-            Configs::dataManager->getDatabase().restoreSelective(tempDbPath.toStdString(), chosen);
+            skippedRules = Configs::dataManager->getDatabase().restoreSelective(tempDbPath.toStdString(), chosen);
         } catch (std::exception& e) {
             QFile::remove(tempDbPath);
             QMessageBox::critical(this, tr("Restore Failed"),
@@ -840,8 +841,10 @@ void DialogBasicSettings::on_backup_restore_clicked() {
     // The exit path's settingsRepo->Save() would write the stale in-memory values back over the restore.
     if (chosen.settings) Configs::dataManager->settingsRepo->noSave = true;
 
-    QMessageBox::information(this, tr("Restore Complete"),
-        tr("Backup restored successfully. Throne will now restart for the changes to take effect."));
+    QString done = tr("Backup restored successfully. Throne will now restart for the changes to take effect.");
+    if (skippedRules > 0)
+        done += "\n\n" + tr("Skipped %n routing rule(s) that use conditions this version of Throne does not support.", nullptr, skippedRules);
+    QMessageBox::information(this, tr("Restore Complete"), done);
     MW_dialog_message(MwMessage::RestartProgram, {});
     QDialog::reject();
 }

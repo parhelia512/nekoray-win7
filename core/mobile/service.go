@@ -206,8 +206,11 @@ func (w *platformInterfaceWrapper) FindConnectionOwner(request *adapter.FindConn
 		if uid == -1 {
 			return nil, E.New("procfs: not found")
 		}
+		// procfs knows only the uid; without its packages, package_name rules could never match here.
+		packageNames, _ := w.iif.PackageNamesByUid(uid)
 		return &adapter.ConnectionOwner{
-			UserId: uid,
+			UserId:              uid,
+			AndroidPackageNames: iteratorToArray[string](packageNames),
 		}, nil
 	}
 

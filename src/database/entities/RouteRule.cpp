@@ -549,6 +549,10 @@ namespace Configs {
         if (fieldName == "rule_set") {
             rule_set = filterEmpty(value);
         }
+        // Early 2025 builds wrote it on sniff rules; kept, though get_rule_json does not emit it.
+        if (fieldName == "sniffers") {
+            sniffers = filterEmpty(value);
+        }
         if (fieldName == "invert") {
             invert = scalar=="true";
         }

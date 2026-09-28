@@ -12,6 +12,8 @@ type PlatformInterface interface {
 	OpenTun(options TunOptions) (int32, error)
 	UseProcFS() bool
 	FindConnectionOwner(ipProtocol int32, sourceAddress string, sourcePort int32, destinationAddress string, destinationPort int32) (*ConnectionOwner, error)
+	// The packages of a uid that the procfs lookup found (UseProcFS); FindConnectionOwner returns them itself.
+	PackageNamesByUid(uid int32) (StringIterator, error)
 	StartDefaultInterfaceMonitor(listener InterfaceUpdateListener) error
 	CloseDefaultInterfaceMonitor(listener InterfaceUpdateListener) error
 	GetInterfaces() (NetworkInterfaceIterator, error)

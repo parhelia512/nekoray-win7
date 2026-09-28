@@ -293,23 +293,58 @@ namespace Configs {
             return std::find(cols.begin(), cols.end(), column) != cols.end();
         }
 
-        void copyTable(SQLite::Database& d, const std::string& table) {
-            if (!tableExists(d, "main", table) || !tableExists(d, "bak", table)) return;
+        // Backup-only column names come from the file, so embedded quotes are doubled.
+        std::string quoteIdent(const std::string& name) {
+            std::string out = "\"";
+            for (const char ch : name) {
+                if (ch == '"') out += '"';
+                out += ch;
+            }
+            return out + "\"";
+        }
+
+        // A route_rules row holding a value in a column this schema lacks (another app's condition) is skipped whole:
+        // copied without it, the rule would match more. Returns the number of skipped rows.
+        int copyTable(SQLite::Database& d, const std::string& table) {
+            if (!tableExists(d, "main", table) || !tableExists(d, "bak", table)) return 0;
 
             const auto mainCols = tableColumns(d, "main", table);
             const auto bakColsVec = tableColumns(d, "bak", table);
             const std::set<std::string> bakCols(bakColsVec.begin(), bakColsVec.end());
+            const std::set<std::string> mainColSet(mainCols.begin(), mainCols.end());
+
+            std::string keepRow;
+            if (table == "route_rules") {
+                for (const auto& c : bakColsVec) {
+                    if (mainColSet.count(c) != 0) continue;
+                    if (!keepRow.empty()) keepRow += " AND ";
+                    keepRow += "(" + quoteIdent(c) + " IS NULL OR " + quoteIdent(c) + " IN ('', '[]', 0, '0'))";
+                }
+            }
+            const int skipped = keepRow.empty() ? 0
+                : d.execAndGet("SELECT COUNT(*) FROM bak." + table + " WHERE NOT (" + keepRow + ")").getInt();
 
             std::string colList;
+            std::string selectList;
             for (const auto& c : mainCols) {
                 if (bakCols.count(c) == 0) continue;
-                if (!colList.empty()) colList += ",";
-                colList += "\"" + c + "\"";
+                if (!colList.empty()) {
+                    colList += ",";
+                    selectList += ",";
+                }
+                colList += quoteIdent(c);
+                // RoutesRepo numbers each profile's rules 0..n-1; close the gaps the skipped rows leave.
+                if (skipped > 0 && c == "rule_order")
+                    selectList += "ROW_NUMBER() OVER (PARTITION BY \"route_profile_id\" ORDER BY \"rule_order\") - 1";
+                else
+                    selectList += quoteIdent(c);
             }
-            if (colList.empty()) return;
+            if (colList.empty()) return 0;
 
             d.exec("DELETE FROM main." + table);
-            d.exec("INSERT INTO main." + table + " (" + colList + ") SELECT " + colList + " FROM bak." + table);
+            d.exec("INSERT INTO main." + table + " (" + colList + ") SELECT " + selectList + " FROM bak." + table +
+                   (keepRow.empty() ? "" : " WHERE " + keepRow));
+            return skipped;
         }
     }
 
@@ -336,8 +371,8 @@ namespace Configs {
         try { dest.exec("VACUUM"); } catch (...) {}
     }
 
-    void Database::restoreSelective(const std::string& srcPath, const BackupParts& parts) {
-        if (!parts.anyDb()) return;
+    int Database::restoreSelective(const std::string& srcPath, const BackupParts& parts) {
+        if (!parts.anyDb()) return 0;
 
         {
             SQLite::Statement attach(db, "ATTACH DATABASE ? AS bak");
@@ -345,13 +380,14 @@ namespace Configs {
             attach.exec();
         }
 
+        int skippedRules = 0;
         try {
             // foreign_keys must be toggled outside a transaction to take effect.
             db.exec("PRAGMA foreign_keys = OFF");
             db.exec("BEGIN IMMEDIATE");
 
             if (parts.profiles) for (const auto& t : kProfileTables) copyTable(db, t);
-            if (parts.routes) for (const auto& t : kRouteTables) copyTable(db, t);
+            if (parts.routes) for (const auto& t : kRouteTables) skippedRules += copyTable(db, t);
             if (parts.settings) {
                 for (const auto& t : kSettingsTables) copyTable(db, t);
                 // Settings saved before the markers table existed have been through no migration yet.
@@ -395,5 +431,6 @@ namespace Configs {
         db.exec("PRAGMA foreign_keys = ON");
         db.exec("DETACH DATABASE bak");
         checkpointWal();
+        return skippedRules;
     }
 }
