@@ -2,9 +2,67 @@
 
 #include "include/database/ProfilesRepo.h"
 #include "include/global/Configs.hpp"
+#include <QRegularExpression> 
 
 namespace Configs
 {
+    QJsonObject SubUserInfo::toJson() const {
+        QJsonObject json;
+        if (!valid) return json;
+        json["valid"] = valid;
+        json["has_quota"] = has_quota;
+        if (upload > 0) json["upload"] = upload;
+        if (download > 0) json["download"] = download;
+        if (total > 0) json["total"] = total;
+        if (expire > 0) json["expire"] = expire;
+        if (!title.isEmpty()) json["title"] = title;
+        if (!web_url.isEmpty()) json["web_url"] = web_url;
+        if (!support_url.isEmpty()) json["support_url"] = support_url;
+        if (!announce.isEmpty()) json["announce"] = announce;
+        if (server_interval > 0) json["server_interval"] = server_interval;
+        return json;
+    }
+
+    SubUserInfo SubUserInfo::fromJson(const QJsonObject &json) {
+        SubUserInfo res;
+        if (json.isEmpty()) return res;
+        res.valid = json["valid"].toBool(false);
+        res.has_quota = json["has_quota"].toBool(false);
+        res.upload = json["upload"].toVariant().toLongLong();
+        res.download = json["download"].toVariant().toLongLong();
+        res.total = json["total"].toVariant().toLongLong();
+        res.expire = json["expire"].toVariant().toLongLong();
+        res.title = json["title"].toString();
+        res.web_url = json["web_url"].toString();
+        res.support_url = json["support_url"].toString();
+        res.announce = json["announce"].toString();
+        res.server_interval = json["server_interval"].toInt(0);
+        return res;
+    }
+
+    SubUserInfo ParseSubUserInfo(const QString &info) {
+        SubUserInfo result;
+        static const QRegularExpression re(R"(\b(upload|download|total|expire)\s*=\s*(\d+))", QRegularExpression::CaseInsensitiveOption);
+        for (auto it = re.globalMatch(info); it.hasNext();) {
+            const auto match = it.next();
+            const QStringView key = match.capturedView(1);
+            const qint64 value = match.capturedView(2).toLongLong();
+            const auto is = [key](QStringView name) { return key.compare(name, Qt::CaseInsensitive) == 0; };
+            if (is(u"upload")) {
+                result.upload = value;
+            } else if (is(u"download")) {
+                result.download = value;
+            } else if (is(u"total")) {
+                result.total = value;
+                result.has_quota = true;
+            } else {
+                result.expire = value > 1000000000000LL ? value / 1000 : value;
+            }
+            result.valid = true;
+        }
+        return result;
+    }
+
     QJsonObject SubscriptionOptions::ToJson() const {
         QJsonObject json;
         if (!user_agent.isEmpty()) json["user_agent"] = user_agent;
@@ -15,6 +73,8 @@ namespace Configs
         if (!hwid_os.isEmpty()) json["hwid_os"] = hwid_os;
         if (!hwid_os_version.isEmpty()) json["hwid_os_version"] = hwid_os_version;
         if (!hwid_model.isEmpty()) json["hwid_model"] = hwid_model;
+        if (update_interval > 0) json["update_interval"] = update_interval;
+        if (respect_server_interval) json["respect_server_interval"] = *respect_server_interval;
         if (keep_working) json["keep_working"] = true;
         if (remove_duplicates) json["remove_duplicates"] = true;
         if (remove_insecure) json["remove_insecure"] = true;
@@ -42,6 +102,8 @@ namespace Configs
         options.hwid_os = json["hwid_os"].toString();
         options.hwid_os_version = json["hwid_os_version"].toString();
         options.hwid_model = json["hwid_model"].toString();
+        options.update_interval = std::max(json["update_interval"].toInt(), 0);
+        if (json["respect_server_interval"].isBool()) options.respect_server_interval = json["respect_server_interval"].toBool();
         options.keep_working = json["keep_working"].toBool();
         options.remove_duplicates = json["remove_duplicates"].toBool();
         options.remove_insecure = json["remove_insecure"].toBool();

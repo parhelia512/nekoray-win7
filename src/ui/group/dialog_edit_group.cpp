@@ -30,7 +30,7 @@ DialogEditGroup::DialogEditGroup(const std::shared_ptr<Configs::Group> &ent, QWi
     ui->skip_auto_update->setChecked(ent->skip_auto_update);
     subOptions = ent->sub_options;
     connect(ui->advanced, &QPushButton::clicked, this, [this] {
-        auto dialog = new DialogEditGroupAdvanced(subOptions, this);
+        auto dialog = new DialogEditGroupAdvanced(subOptions, this->ent->sub_info.server_interval, this);
         connect(dialog, &QDialog::accepted, this, [this, dialog] { subOptions = dialog->Options(); });
         connect(dialog, &QDialog::finished, dialog, &QDialog::deleteLater);
         dialog->open();
@@ -220,9 +220,15 @@ void DialogEditGroup::accept() {
             return;
         }
     }
+    const QString newUrl = ui->url->text().trimmed();
+    if (ent->url != newUrl) {
+        ent->sub_info = Configs::SubUserInfo{};
+        ent->sub_last_update = 0;
+        ent->info.clear();
+    }
     ent->name = ui->name->text().trimmed();
     ent->auto_clear_unavailable = ui->auto_clear_unavailable->isChecked();
-    ent->url = ui->url->text().trimmed();
+    ent->url = newUrl;
     ent->skip_auto_update = ui->skip_auto_update->isChecked();
     ent->sub_options = subOptions;
     ent->front_proxy_id = resolve_proxy_selection(ui->front_proxy, CACHE.front_proxy);
