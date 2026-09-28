@@ -27,6 +27,8 @@ namespace Configs_network {
         QList<QPair<QByteArray, QByteArray>> headers;
         QSsl::SslProtocol tlsProtocol = QSsl::SecureProtocols;
         bool http2 = true;
+        // Verifies the certificate even when net_insecure is on.
+        bool strictTls = false;
     };
 
     class NetworkRequestHelper : QObject {
@@ -44,7 +46,7 @@ namespace Configs_network {
 
         static QString GetHeader(const QList<QPair<QByteArray, QByteArray>> &header, const QString &name);
 
-        static QString DownloadAsset(const QString &url, const QString &fileName, bool useProxy = false);
+        static QString DownloadAsset(const QString &url, const QString &fileName, bool useProxy = false, bool strictTls = false);
     };
 } // namespace Configs_network
 
