@@ -60,6 +60,7 @@ namespace Configs {
 
 class TrayProfileSelector;
 class TrayOtpCodes;
+class GlobalHotkeys;
 class TestRunner;
 class DialogVpnAuth;
 struct VpnAuthChallenge;
@@ -142,7 +143,10 @@ public:
 
     void start_select_mode(QObject *context, const std::function<void(int)> &callback);
 
-    void RegisterHotkey(bool unregister);
+    // Returns a line per global hotkey that could not be registered.
+    QStringList RegisterHotkey(bool unregister);
+
+    bool IsGlobalHotkeySupported() const;
 
     bool StopVPNProcess();
 
@@ -296,6 +300,7 @@ private:
     DataViewHtmlGenerator dataViewHtmlGenerator_;
 
     QList<QShortcut*> hiddenMenuShortcuts;
+    GlobalHotkeys *globalHotkeys = nullptr;
 
     QString addressFilterString;
     QString nameFilterString;
@@ -418,7 +423,7 @@ private:
 
     bool m_adjustingColumns = false;
 
-    void HotkeyEvent(const QString &key);
+    void HotkeyEvent(const QString &id);
 
     void RegisterHiddenMenuShortcuts(bool unregister = false);
     void registerMenuShortcuts(QMenu *menu, QSet<QKeySequence> &claimed);

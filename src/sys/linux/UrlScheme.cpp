@@ -107,8 +107,22 @@ QString UrlScheme_DesiredState(Association a) {
     return (a == Association::Links ? "v4|" : "v1|") + execTarget();
 }
 
+// The deb, the rpm and install_linux.py each install a Throne.desktop that launches this binary; a zip copy has none pointing at itself.
 bool UrlScheme_AutoRegisterByDefault() {
+#ifdef NKR_DESKTOP_EXEC
     return true;
+#else
+    const QString target = execTarget();
+    for (const QString &path : QStandardPaths::locateAll(QStandardPaths::ApplicationsLocation, "Throne.desktop")) {
+        QFile f(path);
+        if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) continue;
+        while (!f.atEnd()) {
+            const QString line = QString::fromUtf8(f.readLine()).trimmed();
+            if (line.startsWith("Exec=") && line.contains(target)) return true;
+        }
+    }
+    return false;
+#endif
 }
 
 bool UrlScheme_IsCurrent(Association a) {

@@ -67,7 +67,6 @@ message("[CMAKE_FIND_ROOT_PATH] ${CMAKE_FIND_ROOT_PATH}")
 set(BUILD_SHARED_LIBS OFF)
 
 include("cmake/print.cmake")
-include("cmake/QHotkey.cmake")
 
 find_package(Threads)
 
@@ -88,8 +87,6 @@ endif ()
 
 include("cmake/myproto.cmake")
 list(APPEND NKR_EXTERNAL_TARGETS myproto)
-
-list(APPEND NKR_EXTERNAL_TARGETS qhotkey)
 
 # Sources
 set(PROJECT_SOURCES
@@ -171,6 +168,10 @@ set(PROJECT_SOURCES
         src/sys/UrlScheme.cpp
 
         include/sys/SystemProxy.hpp
+
+        include/sys/GlobalHotkeys.hpp
+        include/sys/GlobalHotkeyBackend.hpp
+        src/sys/GlobalHotkeys.cpp
 
         include/ui/setting/ThemeManager.hpp
         src/ui/setting/ThemeManager.cpp

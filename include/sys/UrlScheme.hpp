@@ -17,7 +17,7 @@ void UrlScheme_Apply(Association a);
 // Per-platform inverse of Apply(): drops only what we wrote, leaving associations owned by other apps alone.
 void UrlScheme_Remove(Association a);
 
-// Per-platform default of url_scheme_auto_register; false for a portable Windows copy, whose entries would outlive its folder.
+// Per-platform default of url_scheme_auto_register; false for a portable copy, whose entries would outlive its folder.
 bool UrlScheme_AutoRegisterByDefault();
 
 bool UrlScheme_IsSupported(Association a);

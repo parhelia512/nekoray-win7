@@ -5,44 +5,39 @@
 #include <QMenu>
 #include <QShortcut>
 
-#include <memory>
+#include "include/sys/GlobalHotkeys.hpp"
 
-#include <3rdparty/QHotkey/qhotkey.h>
+QStringList MainWindow::RegisterHotkey(bool unregister) {
+    if (!globalHotkeys) {
+        globalHotkeys = new GlobalHotkeys(this);
+        connect(globalHotkeys, &GlobalHotkeys::activated, this, &MainWindow::HotkeyEvent);
+    }
+    if (unregister || Configs::dataManager->settingsRepo->prepare_exit) {
+        globalHotkeys->setActions({});
+        return {};
+    }
 
-namespace {
-    QList<std::shared_ptr<QHotkey>> RegisteredHotkey;
+    const auto &settings = Configs::dataManager->settingsRepo;
+    const QList<GlobalHotkeys::Action> actions{
+        {"show-main-window", tr("Trigger main window"), QKeySequence(settings->hotkey_mainwindow)},
+        {"show-groups", tr("Show groups"), QKeySequence(settings->hotkey_group)},
+        {"show-routes", tr("Show routes"), QKeySequence(settings->hotkey_route)},
+        {"proxy-mode-menu", tr("Proxy mode"), QKeySequence(settings->hotkey_system_proxy_menu)},
+        {"toggle-system-proxy", tr("Toggle System Proxy"), QKeySequence(settings->hotkey_toggle_system_proxy)},
+    };
+    const auto failures = globalHotkeys->setActions(actions);
+
+    QStringList lines;
+    for (const auto &action : actions) {
+        if (!failures.contains(action.id)) continue;
+        lines << QString("%1 (%2): %3").arg(action.text, action.key.toString(QKeySequence::NativeText), failures[action.id]);
+        MW_show_log(tr("Global hotkey not registered: %1").arg(lines.last()));
+    }
+    return lines;
 }
 
-void MainWindow::RegisterHotkey(bool unregister) {
-    while (!RegisteredHotkey.isEmpty()) {
-        auto hk = RegisteredHotkey.takeFirst();
-        hk->deleteLater();
-    }
-    if (unregister || Configs::dataManager->settingsRepo->prepare_exit) return;
-
-    QStringList regstr{
-        Configs::dataManager->settingsRepo->hotkey_mainwindow,
-        Configs::dataManager->settingsRepo->hotkey_group,
-        Configs::dataManager->settingsRepo->hotkey_route,
-        Configs::dataManager->settingsRepo->hotkey_system_proxy_menu,
-        Configs::dataManager->settingsRepo->hotkey_toggle_system_proxy,
-    };
-
-    for (const auto &key: regstr) {
-        if (key.isEmpty()) continue;
-        if (regstr.count(key) > 1) return;
-    }
-    for (const auto &key: regstr) {
-        QKeySequence k(key);
-        if (k.isEmpty()) continue;
-        auto hk = std::make_shared<QHotkey>(k, true);
-        if (hk->isRegistered()) {
-            RegisteredHotkey += hk;
-            connect(hk.get(), &QHotkey::activated, this, [=,this] { HotkeyEvent(key); });
-        } else {
-            hk->deleteLater();
-        }
-    }
+bool MainWindow::IsGlobalHotkeySupported() const {
+    return globalHotkeys && globalHotkeys->isSupported();
 }
 
 void MainWindow::collectMenuShortcuts(QMenu *menu, QSet<QKeySequence> &out) {
@@ -161,19 +156,16 @@ void MainWindow::loadShortcuts()
     RegisterHiddenMenuShortcuts();
 }
 
-void MainWindow::HotkeyEvent(const QString &key) {
-    if (key.isEmpty()) return;
-    runOnUiThread([=,this] {
-        if (key == Configs::dataManager->settingsRepo->hotkey_mainwindow) {
-            tray->activated(QSystemTrayIcon::ActivationReason::Trigger);
-        } else if (key == Configs::dataManager->settingsRepo->hotkey_group) {
-            on_menu_manage_groups_triggered();
-        } else if (key == Configs::dataManager->settingsRepo->hotkey_route) {
-            on_menu_routing_settings_triggered();
-        } else if (key == Configs::dataManager->settingsRepo->hotkey_system_proxy_menu) {
-            ui->menu_spmode->popup(QCursor::pos());
-        } else if (key == Configs::dataManager->settingsRepo->hotkey_toggle_system_proxy) {
-            toggle_system_proxy();
-        }
-    });
+void MainWindow::HotkeyEvent(const QString &id) {
+    if (id == "show-main-window") {
+        trayClickEvent();
+    } else if (id == "show-groups") {
+        on_menu_manage_groups_triggered();
+    } else if (id == "show-routes") {
+        on_menu_routing_settings_triggered();
+    } else if (id == "proxy-mode-menu") {
+        ui->menu_spmode->popup(QCursor::pos());
+    } else if (id == "toggle-system-proxy") {
+        toggle_system_proxy();
+    }
 }

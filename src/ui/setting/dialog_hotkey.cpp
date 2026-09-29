@@ -4,6 +4,8 @@
 
 #include "include/ui/mainwindow_interface.h"
 #include <QAction>
+#include <QLabel>
+#include <QMessageBox>
 
 DialogHotkey::DialogHotkey(QWidget *parent, const QList<QAction*>& actions) : QDialog(parent), ui(new Ui::DialogHotkey) {
     ui->setupUi(this);
@@ -16,6 +18,11 @@ DialogHotkey::DialogHotkey(QWidget *parent, const QList<QAction*>& actions) : QD
     generateShortcutItems(actions);
 
     GetMainWindow()->RegisterHotkey(true);
+    if (!GetMainWindow()->IsGlobalHotkeySupported()) {
+        auto note = new QLabel(QCoreApplication::translate("GlobalHotkeys", "Global hotkeys are not supported in this desktop session."), ui->tab);
+        note->setWordWrap(true);
+        ui->formLayout->insertRow(0, note);
+    }
 }
 
 void DialogHotkey::generateShortcutItems(const QList<QAction*>& actions)
@@ -50,7 +57,12 @@ void DialogHotkey::accept()
 
     Configs::dataManager->settingsRepo->Save();
     MW_dialog_message(MwMessage::UpdateShortcuts, {});
-    GetMainWindow()->RegisterHotkey(false);
+    const auto failures = GetMainWindow()->RegisterHotkey(false);
+    if (!failures.isEmpty() && GetMainWindow()->IsGlobalHotkeySupported()) {
+        QMessageBox box(QMessageBox::Warning, tr("Hotkey"), tr("These global hotkeys could not be registered:") + "\n\n" + failures.join('\n'), QMessageBox::Ok, this);
+        box.setTextFormat(Qt::PlainText);
+        box.exec();
+    }
     QDialog::accept();
 }
 
