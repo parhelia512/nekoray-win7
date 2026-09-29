@@ -1,6 +1,7 @@
 #include <include/configs/sub/warp.h>
 #include <include/api/RPC.h>
 #include <include/global/Configs.hpp>
+#include <include/global/LocalNetwork.hpp>
 #include <QMessageBox>
 #include <QObject>
 #include <QUrl>
@@ -14,7 +15,7 @@ namespace Configs_network {
                 *error = QObject::tr("Request with proxy but no profile started.");
                 return {};
             }
-            QString host = settings->inbound_address == "::" ? "127.0.0.1" : settings->inbound_address;
+            QString host = LocalNetwork::InboundConnectHost();
             if (host.contains(':')) host = "[" + host + "]";
             QString credentials;
             if (settings->inbound_auth) {

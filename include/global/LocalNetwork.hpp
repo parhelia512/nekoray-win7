@@ -9,6 +9,9 @@ namespace LocalNetwork {
     // True only for a wildcard bind; an explicit bind address is already the one clients dial.
     bool LanInboundIsWildcard();
 
+    // Where local clients dial the mixed inbound: loopback for a wildcard bind (Windows refuses to connect to 0.0.0.0), else the bind address; IPv6 unbracketed.
+    QString InboundConnectHost();
+
     // Address of the default route's interface, never our own tun; empty when none can be determined.
     QString LanAddress();
 

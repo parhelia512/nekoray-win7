@@ -9,15 +9,17 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QMessageBox>
+#include <QThread>
 
-#include "3rdparty/qv2ray/v2/proxy/QvProxyConfigurator.hpp"
 #include "include/api/RPC.h"
 #include "include/configs/generate.h"
 #include "include/database/MarkersRepo.h"
 #include "include/global/Configs.hpp"
 #include "include/global/HTTPRequestHelper.hpp"
+#include "include/global/LocalNetwork.hpp"
 #include "include/global/Logger.hpp"
 #include "include/sys/Process.hpp"
+#include "include/sys/SystemProxy.hpp"
 #include "include/ui/mainWindow/MainWindowInternal.h"
 
 #include "include/ui/group/dialog_manage_groups.h"
@@ -149,7 +151,8 @@ void MainWindow::prepare_exit()
     }
     Configs::dataManager->settingsRepo->prepare_exit = true;
     LOG_INFO("prepare_exit started, tearing down proxy/tun/core");
-    if (Configs::dataManager->settingsRepo->spmode_system_proxy) set_system_proxy(false);
+    // Unconditional: an uncheck may still have its clear queued.
+    set_system_proxy(false, true);
     if (Configs::dataManager->settingsRepo->system_dns_set) set_system_dns(false, false);
     RegisterHiddenMenuShortcuts(true);
     RegisterHotkey(true);
@@ -281,13 +284,33 @@ bool MainWindow::get_elevated_permissions(ExitReason reason) {
     return false;
 }
 
-void MainWindow::set_system_proxy(bool enable) {
-    if (enable) {
-        auto socks_port = Configs::dataManager->settingsRepo->inbound_socks_port;
-        SetSystemProxy(socks_port, socks_port, Configs::dataManager->settingsRepo->proxy_scheme);
-    } else {
-        ClearSystemProxy();
+namespace {
+    // networksetup and gsettings runs are slow, and profile start/stop call in from their own threads.
+    QThread *systemProxyThread() {
+        static auto *thread = [] {
+            auto *t = new QThread;
+            t->start();
+            return t;
+        }();
+        return thread;
     }
+}
+
+void MainWindow::set_system_proxy(bool enable, bool wait) {
+    const auto &settings = Configs::dataManager->settingsRepo;
+    const auto host = LocalNetwork::InboundConnectHost();
+    const auto port = settings->inbound_socks_port;
+    const auto format = settings->proxy_scheme;
+    runOnThread([=] {
+        QString error;
+        if (!enable) {
+            error = SystemProxy_Clear();
+        } else if (Configs::dataManager->settingsRepo->spmode_system_proxy) {
+            // Rechecked: a profile start can queue this after the box was unchecked.
+            error = SystemProxy_Apply(host, port, format);
+        }
+        if (!error.isEmpty()) MW_show_log(tr("System proxy: %1").arg(error));
+    }, systemProxyThread(), wait);
 }
 
 void MainWindow::set_spmode_system_proxy(bool enable, bool save) {

@@ -193,6 +193,13 @@ namespace LocalNetwork {
         return addr == QHostAddress(QHostAddress::AnyIPv4) || addr == QHostAddress(QHostAddress::AnyIPv6);
     }
 
+    QString InboundConnectHost() {
+        const auto *s = settings();
+        const QHostAddress addr(s == nullptr ? QString() : s->inbound_address);
+        if (addr.isNull() || addr == QHostAddress(QHostAddress::AnyIPv4) || addr == QHostAddress(QHostAddress::AnyIPv6)) return "127.0.0.1";
+        return addr.toString();
+    }
+
     QString LanAddress() {
         QMutexLocker lock(&lanMutex());
         auto &c = lanCache();

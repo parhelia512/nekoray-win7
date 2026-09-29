@@ -124,7 +124,6 @@ set(PROJECT_SOURCES
         3rdparty/qv2ray/v2/ui/QvAutoCompleteTextEdit.cpp
         3rdparty/qv2ray/v2/ui/widgets/speedchart/SpeedWidget.cpp
         3rdparty/qv2ray/v2/ui/widgets/speedchart/SpeedWidget.hpp
-        3rdparty/qv2ray/v2/proxy/QvProxyConfigurator.cpp
 
         3rdparty/quirc/decode.c
         3rdparty/quirc/identify.c
@@ -170,6 +169,8 @@ set(PROJECT_SOURCES
 
         include/sys/UrlScheme.hpp
         src/sys/UrlScheme.cpp
+
+        include/sys/SystemProxy.hpp
 
         include/ui/setting/ThemeManager.hpp
         src/ui/setting/ThemeManager.cpp

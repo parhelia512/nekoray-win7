@@ -349,7 +349,8 @@ private:
 
     QList<int> get_selected_or_group();
 
-    void set_system_proxy(bool enable);
+    // Queued on one worker thread in call order; wait blocks until this change has run.
+    void set_system_proxy(bool enable, bool wait = false);
 
     void saveProfileFocusState();
 
