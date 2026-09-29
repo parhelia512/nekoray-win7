@@ -1023,17 +1023,19 @@ namespace Configs {
             if (!other || *other == action) continue;
 
             // Every host a suffix or keyword matches contains the value, so an earlier keyword inside it catches them all.
+            // The same line elsewhere does not count: adding rawRule moves it out of that list.
             for (const auto& keyword : rule->domain_keyword) {
-                if (!keyword.isEmpty() && value.contains(keyword.toLower())) {
+                const QString k = keyword.toLower();
+                if (!k.isEmpty() && value.contains(k) && !(prefix == "keyword" && k == value)) {
                     *coveringAction = *other;
                     return "keyword:" + keyword;
                 }
             }
-            // A suffix covers the same or a longer suffix, and only whole labels count: github.com covers api.github.com, not mygithub.com.
+            // A suffix covers a longer suffix, and only whole labels count: github.com covers api.github.com, not mygithub.com.
             if (prefix != "suffix") continue;
             for (const auto& suffix : rule->domain_suffix) {
                 const QString s = suffix.toLower();
-                if (!s.isEmpty() && (value == s || value.endsWith("." + s))) {
+                if (!s.isEmpty() && value.endsWith("." + s)) {
                     *coveringAction = *other;
                     return "suffix:" + suffix;
                 }
