@@ -964,6 +964,105 @@ namespace Configs {
         return true;
     }
 
+    bool RouteProfile::HasSimpleRule(const QString& rawRule, simpleAction action) {
+        const QString raw = rawRule.trimmed();
+        const auto type = get_rule_type(raw, action);
+        if (type == custom) return false;
+
+        for (const auto& rule : Rules) {
+            if (rule->type != type) continue;
+            QString value;
+            const auto* values = simple_rule_values(raw, *rule, &value);
+            if (values && values->contains(value)) return true;
+        }
+        return false;
+    }
+
+    bool RouteProfile::RemoveSimpleRule(const QString& rawRule, simpleAction action) {
+        const QString raw = rawRule.trimmed();
+        const auto type = get_rule_type(raw, action);
+        if (type == custom) return false;
+
+        // Every rule of the type, not just the first: an imported profile may carry duplicates, and a toggle must really switch off.
+        bool removed = false;
+        for (const auto& rule : QList(Rules)) {
+            if (rule->type != type) continue;
+            QString value;
+            auto* values = simple_rule_values(raw, *rule, &value);
+            if (!values || values->removeAll(value) == 0) continue;
+            removed = true;
+            // Only the rule just emptied: a FilterEmptyRules() sweep would take unrelated empty rules with it.
+            if (rule->isEmpty()) Rules.removeOne(rule);
+        }
+        return removed;
+    }
+
+    QString RouteProfile::CoveringSimpleRule(const QString& rawRule, simpleAction action, simpleAction* coveringAction) {
+        const QString raw = rawRule.trimmed();
+        const auto colonIdx = raw.indexOf(':');
+        if (colonIdx == -1) return {};
+        const QString prefix = raw.left(colonIdx).trimmed();
+        const QString value = raw.mid(colonIdx + 1).trimmed().toLower();
+        if (value.isEmpty() || (prefix != "suffix" && prefix != "keyword")) return {};
+
+        const auto addressAction = [](int type) -> std::optional<simpleAction> {
+            switch (type) {
+                case simpleAddressProxy: return proxy;
+                case simpleAddressBypass: return bypass;
+                case simpleAddressBlock: return block;
+                case simpleAddressWarpBypass: return warpBypass;
+                default: return std::nullopt;
+            }
+        };
+
+        // Rules match in list order, and a rule the action does not have yet gets appended at the end.
+        const auto ownType = get_rule_type(raw, action);
+        for (const auto& rule : Rules) {
+            if (rule->type == ownType) break;
+            const auto other = addressAction(rule->type);
+            if (!other || *other == action) continue;
+
+            // Every host a suffix or keyword matches contains the value, so an earlier keyword inside it catches them all.
+            for (const auto& keyword : rule->domain_keyword) {
+                if (!keyword.isEmpty() && value.contains(keyword.toLower())) {
+                    *coveringAction = *other;
+                    return "keyword:" + keyword;
+                }
+            }
+            // A suffix covers the same or a longer suffix, and only whole labels count: github.com covers api.github.com, not mygithub.com.
+            if (prefix != "suffix") continue;
+            for (const auto& suffix : rule->domain_suffix) {
+                const QString s = suffix.toLower();
+                if (!s.isEmpty() && (value == s || value.endsWith("." + s))) {
+                    *coveringAction = *other;
+                    return "suffix:" + suffix;
+                }
+            }
+        }
+        return {};
+    }
+
+    QList<QString>* RouteProfile::simple_rule_values(const QString& content, RouteRule& rule, QString* value)
+    {
+        const auto colonIdx = content.indexOf(':');
+        if (colonIdx == -1) return nullptr;
+        *value = content.mid(colonIdx + 1).trimmed();
+        if (value->isEmpty()) return nullptr;
+
+        const QString prefix = content.left(colonIdx).trimmed();
+        // Stored lowercased by add_simple_address_rule, so looked up the same way.
+        if (prefix == "domain" || prefix == "suffix" || prefix == "keyword") *value = value->toLower();
+        if (prefix == "domain") return &rule.domain;
+        if (prefix == "suffix") return &rule.domain_suffix;
+        if (prefix == "keyword") return &rule.domain_keyword;
+        if (prefix == "regex") return &rule.domain_regex;
+        if (prefix == "ruleset") return &rule.rule_set;
+        if (prefix == "ip") return &rule.ip_cidr;
+        if (prefix == "processName") return &rule.process_name;
+        if (prefix == "processPath") return &rule.process_path;
+        return nullptr;
+    }
+
     bool RouteProfile::add_simple_rule(const QString& content, const std::shared_ptr<RouteRule>& rule, ruleType type)
     {
         if (type == simpleAddressProxy || type == simpleAddressBypass || type == simpleAddressBlock || type == simpleAddressWarpBypass) return add_simple_address_rule(content, rule);

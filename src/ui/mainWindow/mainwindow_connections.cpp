@@ -13,9 +13,14 @@
 #include <QAbstractItemView>
 #include <QApplication>
 #include <QBoxLayout>
+#include <QCheckBox>
 #include <QClipboard>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QFrame>
 #include <QHeaderView>
 #include <QIcon>
+#include <QLabel>
 #include <QMenu>
 #include <QPainter>
 #include <QPixmap>
@@ -27,6 +32,16 @@
 
 namespace
 {
+    // tile.openstreetmap.org -> ["tile.openstreetmap.org", "openstreetmap.org", "org"]
+    QStringList DomainLevels(const QString& host)
+    {
+        const auto labels = host.split('.', Qt::SkipEmptyParts);
+        QStringList levels;
+        for (qsizetype i = 0; i < labels.size(); ++i)
+            levels << QStringList(labels.mid(i)).join('.');
+        return levels;
+    }
+
     QIcon RecolorIcon(const QString& path, const QColor& color)
     {
         QPixmap pixmap(path);
@@ -396,11 +411,11 @@ QString MainWindow::routeRuleAppendBlocker() const
     return {};
 }
 
-bool MainWindow::addRuleToCurrentRoute(const QString& rawRule, Configs::simpleAction action)
+MainWindow::RuleToggle MainWindow::toggleRuleInCurrentRoute(const QString& rawRule, Configs::simpleAction action)
 {
     auto fail = [this](const QString& msg) {
         MW_show_log(msg);
-        return false;
+        return RuleToggle::Failed;
     };
 
     if (const auto blocker = routeRuleAppendBlocker(); !blocker.isEmpty()) return fail(blocker);
@@ -409,16 +424,39 @@ bool MainWindow::addRuleToCurrentRoute(const QString& rawRule, Configs::simpleAc
     const auto currentRoute = dm->routesRepo->GetRouteProfile(dm->settingsRepo->current_route_id);
     if (!currentRoute) return fail(tr("No active routing profile found."));
 
-    if (!currentRoute->AppendSimpleRule(rawRule, action))
-        return fail(tr("Failed to add routing rule: %1").arg(rawRule));
+    const QString target = Configs::simpleActionToString(action);
+    RuleToggle result;
+    QString log;
+    if (currentRoute->HasSimpleRule(rawRule, action))
+    {
+        currentRoute->RemoveSimpleRule(rawRule, action);
+        result = RuleToggle::Removed;
+        log = tr("Removed %1 from the %2 rules of \"%3\"").arg(rawRule, target, currentRoute->name);
+    }
+    else
+    {
+        if (!currentRoute->AppendSimpleRule(rawRule, action))
+            return fail(tr("Failed to add routing rule: %1").arg(rawRule));
+
+        // With one target in two lists the earlier rule silently wins, so taking it here pulls it out of the others.
+        QStringList movedFrom;
+        for (const auto other : {Configs::bypass, Configs::proxy, Configs::block, Configs::warpBypass})
+            if (other != action && currentRoute->RemoveSimpleRule(rawRule, other))
+                movedFrom << Configs::simpleActionToString(other);
+
+        result = movedFrom.isEmpty() ? RuleToggle::Added : RuleToggle::Moved;
+        log = movedFrom.isEmpty()
+                  ? tr("Appended %1 to the %2 rules of \"%3\"").arg(rawRule, target, currentRoute->name)
+                  : tr("Moved %1 from the %2 to the %3 rules of \"%4\"")
+                        .arg(rawRule, movedFrom.join(", "), target, currentRoute->name);
+    }
 
     if (!dm->routesRepo->Save(currentRoute))
         return fail(tr("Failed to save routing rule: %1").arg(rawRule));
 
-    MW_show_log(tr("Appended %1 to the %2 rules of \"%3\"")
-                    .arg(rawRule, Configs::simpleActionToString(action), currentRoute->name));
+    MW_show_log(log);
     noteRestartNeeded(tr("Routing"));
-    return true;
+    return result;
 }
 
 void MainWindow::onConnectionContextMenu(const QPoint& pos)
@@ -449,31 +487,133 @@ void MainWindow::onConnectionContextMenu(const QPoint& pos)
         });
     };
 
-    struct RouteAction { Configs::simpleAction action; QString label; };
+    struct RouteAction { Configs::simpleAction action; QString label; bool offered = true; };
     const RouteAction routeActions[] = {
-        { Configs::bypass, tr("Direct") },
-        { Configs::proxy,  tr("Proxy") },
-        { Configs::block,  tr("Block") },
+        { Configs::bypass,     tr("Direct") },
+        { Configs::proxy,      tr("Proxy") },
+        { Configs::block,      tr("Block") },
+        // Not offered from here, but a target already sitting in its list still has to show up as taken.
+        { Configs::warpBypass, tr("Warp-bypass"), false },
     };
 
-    const QString blocker = routeRuleAppendBlocker();
+    // The menu only picks the action; the targets are chosen in a dialog that opens once the menu has closed.
+    struct RouteTarget { QString label; QString rule; bool separatorBefore = false; };
+    QList<RouteTarget> targets;
+    const RouteAction* pickedAction = nullptr;
 
-    auto addRouteSubmenu = [&](const QString& title, const QString& rule) {
-        auto* sub = menu.addMenu(title);
-        if (!blocker.isEmpty())
-        {
-            sub->setEnabled(false);
-            sub->menuAction()->setToolTip(blocker);
-            return;
-        }
+    auto addRouteSection = [&] {
+        if (targets.isEmpty()) return;
+
+        const QString blocker = routeRuleAppendBlocker();
+        const auto& dm = Configs::dataManager;
+        const auto currentRoute = blocker.isEmpty() ? dm->routesRepo->GetRouteProfile(dm->settingsRepo->current_route_id) : nullptr;
+
+        auto* header = menu.addAction(currentRoute ? tr("Modify rules in \"%1\"").arg(currentRoute->name) : tr("Modify rules"));
+        header->setEnabled(false);
+        header->setToolTip(blocker);
+
         for (const auto& ra : routeActions)
         {
-            auto* act = sub->addAction(ra.label);
-            connect(act, &QAction::triggered, this, [this, rule, ra, showTip] {
-                if (addRuleToCurrentRoute(rule, ra.action))
-                    showTip(tr("Appended to the %1 rules:\n%2").arg(ra.label, rule));
-            });
+            if (!ra.offered) continue;
+            auto* act = menu.addAction(ra.label);
+            if (!currentRoute)
+            {
+                act->setEnabled(false);
+                act->setToolTip(blocker);
+                continue;
+            }
+            connect(act, &QAction::triggered, this, [&pickedAction, &ra] { pickedAction = &ra; });
         }
+        menu.addSeparator();
+    };
+
+    // One checkbox per target, checked where the target already sits in the action's rules.
+    // Only the boxes the user flipped are applied: checking adds (or moves from another list), unchecking removes.
+    auto showTargetsDialog = [&](const RouteAction& ra) {
+        const QString blocker = routeRuleAppendBlocker();
+        if (!blocker.isEmpty())
+        {
+            MW_show_log(blocker);
+            return;
+        }
+        const auto& dm = Configs::dataManager;
+        const auto currentRoute = dm->routesRepo->GetRouteProfile(dm->settingsRepo->current_route_id);
+        if (!currentRoute) return;
+
+        QDialog dialog(this);
+        dialog.setWindowTitle(tr("%1 rules").arg(ra.label));
+        auto* layout = new QVBoxLayout(&dialog);
+        auto* hint = new QLabel(tr("Routing profile \"%1\". Checked targets go %2; unchecking one removes its rule.")
+                                    .arg(currentRoute->name, ra.label), &dialog);
+        hint->setWordWrap(true);
+        layout->addWidget(hint);
+
+        QList<QPair<QCheckBox*, bool>> boxes;
+        for (const auto& target : targets)
+        {
+            if (target.separatorBefore)
+            {
+                auto* line = new QFrame(&dialog);
+                line->setFrameShape(QFrame::HLine);
+                line->setFrameShadow(QFrame::Sunken);
+                layout->addWidget(line);
+            }
+
+            const bool here = currentRoute->HasSimpleRule(target.rule, ra.action);
+            QStringList elsewhere;
+            for (const auto& other : routeActions)
+                if (other.action != ra.action && currentRoute->HasSimpleRule(target.rule, other.action))
+                    elsewhere << other.label;
+
+            QStringList notes;
+            QStringList tips{target.rule};
+            if (!elsewhere.isEmpty())
+            {
+                notes << tr("in %1").arg(elsewhere.join(", "));
+                tips << tr("Checking it moves the rule from %1 to %2").arg(elsewhere.join(", "), ra.label);
+            }
+
+            // A broader rule of another action matched first would leave this one dead, so say which.
+            Configs::simpleAction coveringAction;
+            if (const QString covering = currentRoute->CoveringSimpleRule(target.rule, ra.action, &coveringAction); !covering.isEmpty())
+            {
+                const QString value = covering.section(':', 1);
+                const QString coveringLabel = covering.startsWith("keyword:") ? "*" + value + "*" : "*." + value;
+                QString coveringList;
+                for (const auto& other : routeActions)
+                    if (other.action == coveringAction) coveringList = other.label;
+                notes << tr("covered by %1 in %2").arg(coveringLabel, coveringList);
+                tips << tr("%1 in %2 is matched first, so this rule would never apply").arg(covering, coveringList);
+            }
+
+            auto* box = new QCheckBox(notes.isEmpty() ? target.label : tr("%1  (%2)").arg(target.label, notes.join("; ")), &dialog);
+            box->setChecked(here);
+            box->setToolTip(tips.join('\n'));
+            layout->addWidget(box);
+            boxes << qMakePair(box, here);
+        }
+
+        auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+        connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+        connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+        layout->addWidget(buttons);
+        layout->setSizeConstraint(QLayout::SetFixedSize);
+        if (dialog.exec() != QDialog::Accepted) return;
+
+        QStringList changes;
+        for (qsizetype i = 0; i < boxes.size(); ++i)
+        {
+            if (boxes[i].first->isChecked() == boxes[i].second) continue;
+            const QString& rule = targets[i].rule;
+            switch (toggleRuleInCurrentRoute(rule, ra.action))
+            {
+                case RuleToggle::Added: changes << tr("Added %1").arg(rule); break;
+                case RuleToggle::Moved: changes << tr("Moved %1").arg(rule); break;
+                case RuleToggle::Removed: changes << tr("Removed %1").arg(rule); break;
+                case RuleToggle::Failed: break;
+            }
+        }
+        if (!changes.isEmpty()) showTip(tr("%1 rules:\n%2").arg(ra.label, changes.join('\n')));
     };
 
     auto addCopyAction = [&](const QString& label, const QString& text) {
@@ -495,13 +635,31 @@ void MainWindow::onConnectionContextMenu(const QPoint& pos)
     {
         const QString domain = meta->domain.trimmed();
         const QString host = domain.isEmpty() ? Stats::EndpointHost(meta->dest.trimmed()) : domain;
-        const bool isDomain = QHostAddress(host).isNull();
-        const QString addressRule = isDomain ? ("suffix:" + host) : ("ip:" + host);
 
-        if (!host.isEmpty()) addRouteSubmenu(tr("Append \"%1\" to").arg(host), addressRule);
-        if (!process.isEmpty()) addRouteSubmenu(tr("Append process \"%1\" to").arg(process), "processName:" + process);
+        if (!host.isEmpty() && QHostAddress(host).isNull())
+        {
+            // Every level is a domain_suffix rule and so also covers whatever sits in front of it:
+            // the leading "*." in the label says so, but never reaches the rule itself.
+            // The bare TLD sits apart, since it reroutes a whole zone.
+            // Lowercase, because sing-box lowercases the host it matches but takes rule values as written.
+            const auto levels = DomainLevels(host.toLower());
+            for (qsizetype i = 0; i < levels.size(); ++i)
+                targets << RouteTarget{ "*." + levels[i], "suffix:" + levels[i], i > 0 && i == levels.size() - 1 };
+            // The name in front of the TLD as a keyword rule, which also catches the service's other domains (githubusercontent.com).
+            // Names under 4 letters are left out: co in bbc.co.uk or vk would catch far too much.
+            if (levels.size() > 1)
+            {
+                const QString name = levels[levels.size() - 2].section('.', 0, 0);
+                if (name.size() >= 4) targets.insert(targets.size() - 1, RouteTarget{ "*" + name + "*", "keyword:" + name });
+            }
+        }
+        else if (!host.isEmpty())
+        {
+            targets << RouteTarget{ host, "ip:" + host };
+        }
+        if (!process.isEmpty()) targets << RouteTarget{ tr("Process %1").arg(process), "processName:" + process, true };
+        addRouteSection();
 
-        menu.addSeparator();
         if (!host.isEmpty()) addCopyAction(tr("Copy Destination (%1)").arg(host), host);
         if (!process.isEmpty()) addCopyAction(tr("Copy Process Name (%1)").arg(process), process);
 
@@ -513,7 +671,8 @@ void MainWindow::onConnectionContextMenu(const QPoint& pos)
     {
         if (!process.isEmpty())
         {
-            addRouteSubmenu(tr("Append process \"%1\" to").arg(process), "processName:" + process);
+            targets << RouteTarget{ tr("Process %1").arg(process), "processName:" + process };
+            addRouteSection();
             addCopyAction(tr("Copy Process Name"), process);
         }
 
@@ -528,4 +687,5 @@ void MainWindow::onConnectionContextMenu(const QPoint& pos)
     menu.addSeparator();
     addExpandActions();
     menu.exec(globalPos);
+    if (pickedAction) showTargetsDialog(*pickedAction);
 }

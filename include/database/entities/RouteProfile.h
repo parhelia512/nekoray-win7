@@ -102,6 +102,16 @@ namespace Configs {
         // Adds one "prefix:value" line to the matching simple rule, creating it if the profile has none yet.
         bool AppendSimpleRule(const QString& rawRule, simpleAction action);
 
+        // Whether that "prefix:value" line already sits in the action's simple rules.
+        bool HasSimpleRule(const QString& rawRule, simpleAction action);
+
+        // Drops that "prefix:value" line from the action's simple rules, and a rule it leaves empty along with it.
+        bool RemoveSimpleRule(const QString& rawRule, simpleAction action);
+
+        // A line from another action's simple rules that already catches every host a suffix: or keyword: rawRule would,
+        // and sits in a rule matched before the action's own, so rawRule there would never apply. Empty when there is none.
+        QString CoveringSimpleRule(const QString& rawRule, simpleAction action, simpleAction* coveringAction);
+
         void FilterEmptyRules();
     private:
         static bool add_simple_rule(const QString& content, const std::shared_ptr<RouteRule>& rule, ruleType type);
@@ -109,6 +119,9 @@ namespace Configs {
         static bool add_simple_address_rule(const QString& content, const std::shared_ptr<RouteRule>& rule);
 
         static bool add_simple_process_rule(const QString& content, const std::shared_ptr<RouteRule>& rule);
+
+        // The list inside rule that a "prefix:value" line lives in, with the value split off into *value; nullptr for an unknown prefix.
+        static QList<QString>* simple_rule_values(const QString& content, RouteRule& rule, QString* value);
 
         std::shared_ptr<RouteRule> get_simple_rule_by_type(ruleType type);
 
